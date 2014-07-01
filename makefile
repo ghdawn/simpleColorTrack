@@ -1,13 +1,28 @@
-
-CFLAGS = -g  -fPIC -L/usr/local/lib \
+ObjPath = obj/
+ExePath = bin/
+CFLAGS = -g  -fPIC  \
 		-I../iTRLib/3rdparty/alglib/ \
 		-I../iTRLib/itralgorithm/ \
 		-I../iTRLib/itrbase/ \
 		-I../iTRLib/itrvision/ \
 		-I../iTRLib/itrdevice/
 
-all: main.cpp colortrack.o
-	g++ -o main $(CFLAGS) colortrack.o main.cpp 
+Libs= -L/usr/local/lib \
+		-L../iTRLib/itralgorithm/bin/Debug \
+		-L../iTRLib/itrbase/bin/Debug \
+		-L../iTRLib/itrvision/bin/Debug \
+		-L../iTRLib/itrdevice/bin/Debug \
+		-litrbase -litrvision -litralgorithm -litrdevice
 
-colortrack.o: colortrack.h colortrack.cpp
-	g++ -c colortrack.cpp $(CFLAGS) -o colortrack.o
+
+all: main.cpp $(ObjPath)colortrack.o
+	mkdir $(ExePath)
+	g++ -o $(ExePath)main $(CFLAGS) $(ObjPath)colortrack.o main.cpp 
+
+$(ObjPath)colortrack.o: colortrack.h colortrack.cpp
+	mkdir $(ObjPath)
+	g++ -c colortrack.cpp $(CFLAGS) -o $(ObjPath)colortrack.o
+
+clean: bin/ obj/
+	rm bin/*
+	rm obj/*
