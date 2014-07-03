@@ -9,6 +9,6 @@ struct Config
 {
     int color;
     int result;
-    int camera;
+    int fps;
     int pixel;
 };

@@ -1,28 +1,38 @@
 ObjPath = obj/
 ExePath = bin/
-CFLAGS = -g  -fPIC  \
-		-I../../iTRLib/3rdparty/alglib/ \
+Inc = 	-I../../iTRLib/3rdparty/alglib/ \
 		-I../../iTRLib/itralgorithm/ \
 		-I../../iTRLib/itrbase/ \
 		-I../../iTRLib/itrvision/ \
 		-I../../iTRLib/itrdevice/
 
 Libs= -L/usr/local/lib \
-		-L../../iTRLib/itralgorithm/bin/Debug \
-		-L../../iTRLib/itrbase/bin/Debug \
-		-L../../iTRLib/itrvision/bin/Debug \
-		-L../../iTRLib/itrdevice/bin/Debug \
-		-litrbase -litrvision -litralgorithm -litrdevice
+		-L../../iTRLib/itralgorithm/bin/debug/ \
+		-L../../iTRLib/itrbase/bin/debug/ \
+		-L../../iTRLib/itrvision/bin/debug/ \
+		-L../../iTRLib/itrdevice/bin/debug/ \
+		-litrbase -litrvision -litralgorithm -litrdevice \
+		-lavcodec -lswscale -lavutil -lx264 -lpthread
+
+OBJS_SERVER=	$(ObjPath)capture.o $(ObjPath)vcompress.o  $(ObjPath)server.o $(ObjPath)colortrack.o
 
 
-all: main.cpp $(ObjPath)colortrack.o
-	mkdir $(ExePath)
-	g++ -o $(ExePath)main $(CFLAGS) $(ObjPath)colortrack.o main.cpp 
+CXXFLAGS=	-c -g -O0 -fPIC -L/usr/local/lib
 
-$(ObjPath)colortrack.o: colortrack.h colortrack.cpp
-	mkdir $(ObjPath)
-	g++ -c colortrack.cpp $(CFLAGS) -o $(ObjPath)colortrack.o
+all: webcam_server
 
+$(ObjPath)%.o: %.cpp
+	mkdir -p $(ObjPath)
+	$(CXX) $(Inc) $(CXXFLAGS)  $< -o $@
+
+
+webcam_server: $(OBJS_SERVER)
+	mkdir -p $(ExePath)
+	$(CXX) -o $(ExePath)$@ $^ $(Libs) $(Inc)
+	
+	
+
+.PHONY : clean
 clean: bin/ obj/
-	rm bin/*
-	rm obj/*
+	-rm bin/*
+	-rm obj/*

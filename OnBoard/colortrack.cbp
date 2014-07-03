@@ -39,9 +39,15 @@
 		</Compiler>
 		<Unit filename="Udp.h" />
 		<Unit filename="basestruct.h" />
+		<Unit filename="capture.cpp" />
+		<Unit filename="capture.h" />
 		<Unit filename="colortrack.cpp" />
 		<Unit filename="colortrack.h" />
 		<Unit filename="main.cpp" />
+		<Unit filename="server.cpp" />
+		<Unit filename="types.h" />
+		<Unit filename="vcompress.cpp" />
+		<Unit filename="vcompress.h" />
 		<Extensions>
 			<code_completion />
 			<debugger />
