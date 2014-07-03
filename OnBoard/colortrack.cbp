@@ -18,6 +18,7 @@
 					<Add directory="../../iTRLib/itrbase" />
 					<Add directory="../../iTRLib/itrvision" />
 					<Add directory="../../iTRLib/itrdevice" />
+					<Add directory="include" />
 				</Compiler>
 			</Target>
 			<Target title="Release">
