@@ -15,6 +15,7 @@ extern "C" {
 #include "itrdevice.h"
 #include "basestruct.h"
 #include "colortrack.h"
+#include "yuv2hsl.h"
 using namespace std;
 
 const int MaxSendLength=1000;
@@ -39,35 +40,34 @@ void Init()
 
 bool start=false;
 bool track=false;
-
-void Option(char* Data)
+///SSP接受数据，进行命令解析
+void SSPReceivefuc(itr_protocol::StandSerialProtocol* SSP, itr_protocol::StandSerialFrameStruct* SSFS,U8* Package,S32 PackageLength)
 {
-            switch(Data[0])
+     switch(Package[0])
             {
-                case 0:
+                case 2:
                     start=false;
                     track=false;
                     break;
-                case 1:
+                case 3:
                     start=true;
                     track=false;
+                    //直接转发
                     break;
-                case 2:
+                case 4:
                     start=true;
                     track=true;
                     break;
-                case 3:
-                    config.color=Data[1];
-                    config.result=Data[2];
+                case 5:
+                    config.color=Package[1];
+                    config.result=Package[2];
                     break;
-                case 4:
-                	config.fps=Data[1];
-                    config.pixel=Data[2];
+                case 6:
+                	config.fps=Package[1];
+                    config.pixel=Package[2];
                     break;
             }
-
 }
-
 /** webcam_server: 打开 /dev/video0, 获取图像, 压缩, 发送到 localhost:3020 端口
  *
  * 	使用 320x240, fps=10
@@ -80,7 +80,12 @@ int main (int argc, char **argv)
 	Init();
 	char RecBuf[MaxRecLength];
     char SendBuf[MaxSendLength];
+     itr_protocol::StandSerialProtocol ssp_obj;
+     yuv2rgb yuv2rgb_obj;
 	void *capture = capture_open("/dev/video0", Width[config.pixel], Height[config.pixel], PIX_FMT_YUV420P);
+
+	U8* img_hs=new U8[2*Width[config.pixel]*Height[config.pixel]];
+
 	if (!capture) {
 		fprintf(stderr, "ERR: can't open '/dev/video0'\n");
 		exit(-1);
@@ -94,11 +99,13 @@ int main (int argc, char **argv)
 
 
 	// int tosleep = 1000000 / VIDEO_FPS;
-	for (int i=0; ;i++ ) {
+	for (; ; ) {
 		if(_udp.Receive(RecBuf,MaxRecLength))
         {
             //TODO:使用SSP进行解包
-            Option(RecBuf);
+            ssp_obj.Init(0xA5 ,0x5A ,NULL);
+            ssp_obj.ProcessFunction[0]=&SSPReceivefuc;
+            ssp_obj.ProcessRawByte((U8*)RecBuf,MaxRecLength);
         }
         // if (!start)
         //     continue;
@@ -106,12 +113,15 @@ int main (int argc, char **argv)
         //TODO:获取图像，进行RGB，HSL的转换
 		Picture pic;
 		capture_get_picture(capture, &pic);
-        
+        yuv2rgb_obj.doyuv2hsl(Width[config.pixel],Height[config.pixel],pic.data[0],pic.data[1],pic.data[2],
+                                                    img_hs,img_hs+Width[config.pixel]*Height[config.pixel]);
+
 
         //TODO：进行跟踪
         if(track)
         {
 //            list=tracker.Track(*,*);
+
         }
 
 		// 压缩图像
@@ -120,10 +130,10 @@ int main (int argc, char **argv)
 		int rc = vc_compress(encoder, pic.data, pic.stride, &outdata, &outlen);
 		printf("%d\n",rc );
 		if (rc < 0) continue;
-		
+
 		//用SSP封装，包括图像和跟踪结果
-		
-		
+
+
 		// 发送结果
 		package.pbuffer=(char*)outdata;
 		package.len=outlen;

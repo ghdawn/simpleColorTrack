@@ -44,11 +44,12 @@
 		<Unit filename="capture.h" />
 		<Unit filename="colortrack.cpp" />
 		<Unit filename="colortrack.h" />
-		<Unit filename="main.cpp" />
 		<Unit filename="server.cpp" />
 		<Unit filename="types.h" />
 		<Unit filename="vcompress.cpp" />
 		<Unit filename="vcompress.h" />
+		<Unit filename="yuv2hsl.cpp" />
+		<Unit filename="yuv2hsl.h" />
 		<Extensions>
 			<code_completion />
 			<debugger />
