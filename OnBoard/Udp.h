@@ -47,7 +47,10 @@ namespace Communication
             bind(sock,(struct sockaddr*)&selfAddr,sizeof(selfAddr));
             recmsg=wait?0:MSG_DONTWAIT;
         }
-
+        ~Udp()
+        {
+            close(sock);
+        }
         int Send(const UdpPackage &package)
         {
             socklen_t slen = sizeof(dstAddr);
