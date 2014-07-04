@@ -486,3 +486,6 @@
 1404398150 /home/guanqp/workspace/simpleColorTrack/OnBoard/yuv2hsl.h
 	"itrbase.h"
 
+1404398277 source:/home/guanqp/workspace/simpleColorTrack/OnBoard/yuv2hsl.cpp
+	"yuv2hsl.h"
+
