@@ -179,7 +179,7 @@ int main (int argc, char **argv)
         if(config.result==0)
         {
         	int offset=0;
-        	tempbuff[offset++]=0x30;
+        	tempbuff[offset++]=0x40;
             tempbuff[offset++]=mode;
             memcpy(tempbuff+offset,(void*)&fps,4);
             offset+=4;
