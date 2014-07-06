@@ -28,7 +28,7 @@ char SendBuf[MaxSendLength];
 int SendLength;
 Communication::Udp _udp(ListenPort,false);
 Communication::Udp::UdpPackage udpPackage;
-itr_protocol::StandSerialProtocol ssp_obj;
+itr_protocol::StandSerialProtocol sspUdp;
 ColorTrack tracker;
 
 Config config;
@@ -68,6 +68,10 @@ void SSPReceivefuc(itr_protocol::StandSerialProtocol *SSP, itr_protocol::StandSe
 S32 SendResultPrepare(U8* Buffer,S32 Length)
 {
 	MemoryCopy(SendBuf,Buffer,Length);
+	// for (int i = 0; i < Length; ++i)
+	// {
+	// 	printf("%x ",Buffer[i]);
+	// }
 	MemoryCopy(SendBuf+Length,(void*)imgCompressData,imgLength);
     SendLength=Length+imgLength;
     return SendLength;
@@ -86,8 +90,8 @@ void Init()
 
     itr_math::MathObjStandInit();
 
-    ssp_obj.Init(0xA5 ,0x5A ,SendResultPrepare);//串口发送函数 代替 NULL
-    ssp_obj.ProcessFunction[0]=&SSPReceivefuc;
+    sspUdp.Init(0xA5 ,0x5A ,SendResultPrepare);//串口发送函数 代替 NULL
+    sspUdp.ProcessFunction[0]=&SSPReceivefuc;
 }
 
 
@@ -124,7 +128,7 @@ int main (int argc, char **argv)
         if(_udp.Receive(RecBuf,MaxRecLength))
         {
             //使用SSP进行解包
-            ssp_obj.ProcessRawByte((U8 *)RecBuf,MaxRecLength);
+            sspUdp.ProcessRawByte((U8 *)RecBuf,MaxRecLength);
         }
         if (!start)
         {
@@ -157,7 +161,7 @@ int main (int argc, char **argv)
         // 压缩图像
 
         int rc = vc_compress(encoder, pic.data, pic.stride, &imgCompressData, &imgLength);
-        printf("%d\n",rc );
+        // printf("%d\n",rc );
         if (rc < 0)
         {
             continue;
@@ -170,7 +174,7 @@ int main (int argc, char **argv)
             tempbuff[0]=(start)?1:0;
             tempbuff[1]=(track)?1:0;
             MemoryCopy(tempbuff+2,(void*)&blocklist[0],sizeof(blocklist[0]));
-            ssp_obj.SSPSendPackage(0,tempbuff,sizeof(blocklist[0])+2);
+            sspUdp.SSPSendPackage(0,tempbuff,sizeof(blocklist[0])+2);
         }
 
         // 发送结果
