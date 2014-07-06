@@ -68,19 +68,19 @@ void yuv2hsl::doyuv2hsl(int Width, int Height,U8*Y,U8*U,U8*V,U8*H,U8*S)
     static int ii=0;
     FILE *fp=NULL;
     char fname[20]="rgbtest0001.ppm";
-    sprintf(fname,"rgbtest%4d.ppm",ii++);
+    sprintf(fname,"rgbtest%04d.ppm",ii++);
 
     if((fp=fopen(fname,"w"))==NULL)
     {
         printf("fail to create file rgbtest%4d.ppm\n",ii);
         exit(0);
     }
-    fprintf(fp,"P3\n%d %d\n255\n",Width,Height);
+    fprintf(fp,"P6\n%d %d\n255\n",Width,Height);
 #endif // debugthis
     for(int i=0; i<_size; i++)
     {
-        u=U[i]-128;
-        v=V[i]-128;
+        u=(int)U[i]-128;
+        v=(int)V[i]-128;
 
         int rdif= v+((v*103)>>8);
         int invgdif =((u*88)>>8)+((v*183)>>8);
@@ -100,7 +100,7 @@ void yuv2hsl::doyuv2hsl(int Width, int Height,U8*Y,U8*U,U8*V,U8*H,U8*S)
         if(rgb[2]>255)rgb[2]=255;
         if(rgb[2]<0)rgb[2]=0;
 #ifdef  debugthis
-        fprintf(fp,"%d%d%d",rgb[0],rgb[1],rgb[2]);
+        fprintf(fp,"%c%c%c",rgb[0],rgb[1],rgb[2]);
 #endif // debugthis
         RGB2HSL(rgb,hsl);
         H[i]=hsl[0];
