@@ -10,7 +10,6 @@ extern "C" {
 #include "capture.h"
 #include "vcompress.h"
 
-
 #include "Udp.h"
 #include "itrdevice.h"
 #include "basestruct.h"
@@ -128,7 +127,7 @@ int main (int argc, char **argv)
                 _index++;
         }
 
-        //TODO：进行跟踪
+        //进行跟踪
         std::vector<itr_vision::Block> blocklist;
         if(track)
         {
