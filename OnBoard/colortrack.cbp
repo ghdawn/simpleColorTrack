@@ -20,6 +20,15 @@
 					<Add directory="../../iTRLib/itrdevice" />
 					<Add directory="include" />
 				</Compiler>
+				<Linker>
+					<Add library="avcodec" />
+					<Add library="swscale" />
+					<Add library="avutil" />
+					<Add library="x264" />
+					<Add library="pthread" />
+					<Add library="../../iTRLib/itrbase/bin/debug/libitrbase.a" />
+					<Add library="../../iTRLib/itrvision/bin/debug/libitrvision.a" />
+				</Linker>
 			</Target>
 			<Target title="Release">
 				<Option output="bin/Release/colortrack" prefix_auto="1" extension_auto="1" />

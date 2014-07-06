@@ -5,11 +5,11 @@ ColorTrack::ColorTrack()
     //ctor
 }
 
-    /*1.read from file to Matrix         */
-    /*2.Binarization                                */
-    /*3.ConnectedAnalysis                   */
-    /*4.Output the target coordinate*/
-std::vector<itr_vision::Block> Track( Matrix& H, Matrix& S, int color)
+/*1.read from file to Matrix         */
+/*2.Binarization                                */
+/*3.ConnectedAnalysis                   */
+/*4.Output the target coordinate*/
+std::vector<itr_vision::Block> ColorTrack::Track( Matrix &H, Matrix &S, int color)
 {
 
     itr_vision::Binarization BObject;
@@ -18,10 +18,11 @@ std::vector<itr_vision::Block> Track( Matrix& H, Matrix& S, int color)
 
     const float dh=10;
     const float ds=20;
-    BObject.Threshold(H,color+dh,color-dh);
-    BObject.Threshold(S,color+ds,color-ds);
+    BObject.Threshold(H,color+50,color-dh);
+    BObject.Threshold(S,100,70);
     int _size=H.GetCol()*H.GetRow();
     for(int i=0; i<_size; ++i)
+    {
         if(H[i]*S[i]<10)
         {
             H[i]=0;
@@ -30,6 +31,7 @@ std::vector<itr_vision::Block> Track( Matrix& H, Matrix& S, int color)
         {
             H[i]=255;
         }
+    }
     CAObject.Contour(H,blocks);
 
     return (blocks);

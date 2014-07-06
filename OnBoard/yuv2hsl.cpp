@@ -5,12 +5,7 @@ yuv2hsl::yuv2hsl()
     //ctor
 }
 
-yuv2hsl::~yuv2hsl()
-{
-    //dtor
-}
-
-void RGB2HSL(int *RGB, float *HSL)
+void yuv2hsl::RGB2HSL(int *RGB, float *HSL)
 {
     float r = RGB[0] / 255.0;
     float g = RGB[1] / 255.0;
@@ -63,7 +58,7 @@ void RGB2HSL(int *RGB, float *HSL)
     }
     HSL[0] /= 6.0;
 }
-void doyuv2hsl(int Width, int Height,U8*Y,U8*U,U8*V,U8*H,U8*S)
+void yuv2hsl::doyuv2hsl(int Width, int Height,U8*Y,U8*U,U8*V,U8*H,U8*S)
 {
     int rgb[3]={0};
     float hsl[3]={0};

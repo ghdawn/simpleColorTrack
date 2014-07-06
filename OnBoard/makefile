@@ -11,10 +11,10 @@ Libs= -L/usr/local/lib \
 		-L../../iTRLib/itrbase/bin/debug/ \
 		-L../../iTRLib/itrvision/bin/debug/ \
 		-L../../iTRLib/itrdevice/bin/debug/ \
-		-litrbase -litrvision -litralgorithm -litrdevice \
+		-litrbase -litrvision  \
 		-lavcodec -lswscale -lavutil -lx264 -lpthread
 
-OBJS_SERVER=	$(ObjPath)capture.o $(ObjPath)vcompress.o  $(ObjPath)server.o $(ObjPath)colortrack.o
+OBJS_SERVER=	$(ObjPath)capture.o $(ObjPath)vcompress.o  $(ObjPath)server.o $(ObjPath)colortrack.o $(ObjPath)yuv2hsl.o
 
 
 CXXFLAGS=	-c -g -O0 -fPIC -L/usr/local/lib
