@@ -82,11 +82,14 @@ int main (int argc, char **argv)
 	char RecBuf[MaxRecLength];
     char SendBuf[MaxSendLength];
      itr_protocol::StandSerialProtocol ssp_obj;
-     yuv2rgb yuv2rgb_obj;
+
+     yuv2hsl yuv2hsl_obj;///用于yuv到hls转换
+
 	void *capture = capture_open("/dev/video0", Width[config.pixel], Height[config.pixel], PIX_FMT_YUV420P);
 
 	U8* img_hs=new U8[2*Width[config.pixel]*Height[config.pixel]];
     itr_math::Matrix mat_H(Height[config.pixel],Width[config.pixel]),mat_S(Height[config.pixel],Width[config.pixel]);
+
 	if (!capture) {
 		fprintf(stderr, "ERR: can't open '/dev/video0'\n");
 		exit(-1);
@@ -103,7 +106,7 @@ int main (int argc, char **argv)
 	for (; ; ) {
 		if(_udp.Receive(RecBuf,MaxRecLength))
         {
-            //TODO:使用SSP进行解包
+            //使用SSP进行解包
             ssp_obj.Init(0xA5 ,0x5A ,NULL);//串口发送函数 代替 NULL
             ssp_obj.ProcessFunction[0]=&SSPReceivefuc;
             ssp_obj.ProcessRawByte((U8*)RecBuf,MaxRecLength);
@@ -111,12 +114,13 @@ int main (int argc, char **argv)
          if (!start)
              continue;
 
-        //TODO:获取图像，进行RGB，HSL的转换
+        //获取图像，进行RGB，HSL的转换
 		Picture pic;
 		capture_get_picture(capture, &pic);
-        yuv2rgb_obj.doyuv2hsl(Width[config.pixel],Height[config.pixel],pic.data[0],pic.data[1],pic.data[2],
+        yuv2hsl_obj.doyuv2hsl(Width[config.pixel],Height[config.pixel],pic.data[0],pic.data[1],pic.data[2],
                                                     img_hs,img_hs+Width[config.pixel]*Height[config.pixel]);
         //将HS转存入矩阵中
+        //TODO:可否直接用已申请好的内存直接生成矩阵?
         int _index=0, _size=Height[config.pixel]*Width[config.pixel];
         for(int i=0; i<_size; i++){
                 mat_H[_index]=img_hs[_index];

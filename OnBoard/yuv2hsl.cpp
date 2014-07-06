@@ -1,18 +1,15 @@
 #include "yuv2hsl.h"
 
-yuv2rgb::yuv2rgb()
+yuv2hsl::yuv2hsl()
 {
     //ctor
 }
 
-yuv2rgb::~yuv2rgb()
+yuv2hsl::~yuv2hsl()
 {
     //dtor
 }
-void doyuv2hsl(int Width, int Height,U8*Y,U8*U,U8*V,U8*H,U8*S)
-{
 
-}
 void RGB2HSL(int *RGB, float *HSL)
 {
     float r = RGB[0] / 255.0;
@@ -65,4 +62,38 @@ void RGB2HSL(int *RGB, float *HSL)
         HSL[0] = (r == m ? 3.0 + g2 : 5.0 - r2);
     }
     HSL[0] /= 6.0;
+}
+void doyuv2hsl(int Width, int Height,U8*Y,U8*U,U8*V,U8*H,U8*S)
+{
+    int rgb[3]={0};
+    float hsl[3]={0};
+    int _size=Width*Height;
+    int u, v;
+    for(int i=0; i<_size; i++)
+    {
+        u=U[i]-128;
+        v=V[i]-128;
+
+        int rdif= v+((v*103)>>8);
+        int invgdif =((u*88)>>8)+((v*183)>>8);
+        int bdif=u+((u*198)>>8);
+
+        rgb[0]=Y[i]+rdif;
+        rgb[1]=Y[i]-invgdif;
+        rgb[2]=Y[i]+bdif;
+//防止出现溢出
+        if(rgb[0]>255)rgb[0]=255;
+        if(rgb[0]<0)rgb[0]=0;
+
+        if(rgb[1]>255)rgb[1]=255;
+        if(rgb[1]<0)rgb[1]=0;
+
+        if(rgb[2]>255)rgb[2]=255;
+        if(rgb[2]<0)rgb[2]=0;
+
+        RGB2HSL(rgb,hsl);
+        H[i]=hsl[0];
+        S[i]=hsl[1];
+        //L[i]=hsl[2];
+    }
 }
