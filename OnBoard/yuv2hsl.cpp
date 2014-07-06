@@ -1,7 +1,7 @@
 #include "yuv2hsl.h"
 #include<stdlib.h>
 
-#define debugthis
+
 
 yuv2hsl::yuv2hsl()
 {
@@ -165,8 +165,6 @@ void yuv2hsl::doyuv2hsl(int Width, int Height,U8*yData,U8*uData,U8*vData,U8*H,U8
             rgb[0] = py+rdif;    // R
             rgb[1] = py-invgdif; // G
             rgb[2] = py+bdif;    // B
-            j = nYLen - Width - m + x;
-            i = (j<<1) + j;
 
             //防止出现溢出
         if(rgb[0]>255)rgb[0]=255;
@@ -182,8 +180,8 @@ void yuv2hsl::doyuv2hsl(int Width, int Height,U8*yData,U8*uData,U8*vData,U8*H,U8
 #endif // debugthis
 
         RGB2HSL(rgb,hsl);
-        H[i]=hsl[0];
-        S[i]=hsl[1];
+        H[x+y*Width]=hsl[0]*360;
+        S[x+y*Width]=hsl[1]*100;
         }
     }
     #ifdef debugthis

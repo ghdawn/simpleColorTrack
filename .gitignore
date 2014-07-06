@@ -21,3 +21,8 @@ bin/
 *.exe
 *.out
 *.app
+
+*.depend*
+*.layout*
+*.pgm
+*.ppm
