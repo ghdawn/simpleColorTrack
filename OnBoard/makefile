@@ -14,7 +14,8 @@ Libs= -L/usr/local/lib \
 		-litrbase -litrvision  \
 		-lavcodec -lswscale -lavutil -lx264 -lpthread
 
-OBJS_SERVER=	$(ObjPath)capture.o $(ObjPath)vcompress.o  $(ObjPath)server.o $(ObjPath)colortrack.o $(ObjPath)yuv2hsl.o
+OBJS_SERVER=	$(ObjPath)capture.o $(ObjPath)vcompress.o  $(ObjPath)server.o \
+				$(ObjPath)colortrack.o $(ObjPath)yuv2hsl.o $(ObjPath)gimbal.o $(ObjPath)serialport.o
 
 
 CXXFLAGS=	-c -g -O0 -fPIC -L/usr/local/lib

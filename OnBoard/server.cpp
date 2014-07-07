@@ -70,10 +70,6 @@ S32 SSPSend(U8* Buffer,S32 Length)
 		printf("%X ",Buffer[i]);
 	}
 	printf("\n");
-	for (int i = 0; i < Length; ++i)
-	{
-		printf("%X ",Buffer[i]);
-	}
 	memcpy(SendBuf+Length,(void*)imgCompressData,imgLength);
     SendLength=Length+imgLength;
     return SendLength;
@@ -96,7 +92,8 @@ void Init()
     sspUdp.Init(0xA5 ,0x5A ,SSPSend);//串口发送函数 代替 NULL
     sspUdp.ProcessFunction[0]=&SSPReceivefuc;
 
-    sportobj.Init("/dev/ttyUSB0",115200);
+    GimbalInit();
+    // sportobj.Init("/dev/ttyUSB0",115200);
 }
 /*
 
@@ -111,7 +108,7 @@ int main (int argc, char **argv)
 {
     Init();
     U8 tempbuff[100];
-    char**ControlData;
+    char* ControlData;
     int controllength=0;
     F32 fps,x,y,Area;
     TimeClock clock;
@@ -169,12 +166,19 @@ int main (int argc, char **argv)
             blocklist=tracker.Track(mat_H,mat_S,ColorTable[config.color]);
             x=y=Area=-1;
             if(blocklist.size()>0)
-               { printf("%f %f %f\n",blocklist[0].x,blocklist[0].y,blocklist[0].Area);
-                x=blocklist[0].x;
-                y=blocklist[0].y;
-                Area=blocklist[0].Area;
-                GimbalControl( x, y,ControlData,controllength);
-                sportobj.Send((unsigned char*)*ControlData,controllength);
+               { 
+                    printf("%f %f %f\n",blocklist[0].x,blocklist[0].y,blocklist[0].Area);
+                    x=blocklist[0].x;
+                    y=blocklist[0].y;
+                    Area=blocklist[0].Area;
+                    GimbalControl( x, y,&ControlData,controllength);
+                    printf("Control:%d\n", controllength);
+                    for (int i = 0; i < controllength; ++i)
+                    {
+                        printf("%x ",ControlData[i] );
+                    }
+                    printf("\n");
+                    // sportobj.Send((unsigned char*)*ControlData,controllength);
             }
         }
 

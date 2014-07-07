@@ -15,9 +15,14 @@ static float xformer=0;
 static float yformer=0;
 
 U8 Buffer[20];
+S32 len;
 S32 SSPSendfun(U8* buffer,S32 Length)
 {
-    return Length;
+    for (int i = 0; i < Length; ++i)
+    {
+        Buffer[i]=buffer[i];
+    }
+    return len=Length;
 }
 
 void GimbalInit()
@@ -29,12 +34,11 @@ void GimbalControl(float x,float y,char**ControlData,int &length)
 {
     float omegax;
     float omegay;
-    omegax = (x-U0)*kpx +xformer*kdx;
-    omegay = (y-V0)*kpy + yformer*kdy;
+    omegax = (x-U0)*kpx + (xformer-x)*kdx;
+    omegay = (y-V0)*kpy + (yformer-y)*kdy;
     xformer=x;
     yformer=y;
-    *ControlData=(char*)Buffer;
-    length=6;
+    
 
     ASU8(&Buffer[0]) = 0x30;
     ASU8(&Buffer[1]) = 1;
@@ -42,4 +46,6 @@ void GimbalControl(float x,float y,char**ControlData,int &length)
     ASS16(&Buffer[4]) = S16(omegay*10);
 
     sspObj.SSPSendPackage(0,Buffer,6);
+    *ControlData=(char*)Buffer;
+    length=len;
 }
