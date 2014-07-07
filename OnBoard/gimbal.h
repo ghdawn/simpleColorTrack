@@ -7,6 +7,6 @@ extern float kpy;
 extern float kdy;
 
 void GimbalInit();
-void GimbalControl(float x,float y,char* ControlData,int length)
+void GimbalControl(float x,float y,char**ControlData,int &length);
 
 #endif

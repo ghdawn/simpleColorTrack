@@ -53,6 +53,10 @@
 		<Unit filename="capture.h" />
 		<Unit filename="colortrack.cpp" />
 		<Unit filename="colortrack.h" />
+		<Unit filename="gimbal.cpp" />
+		<Unit filename="gimbal.h" />
+		<Unit filename="serialport.cpp" />
+		<Unit filename="serialport.h" />
 		<Unit filename="server.cpp" />
 		<Unit filename="types.h" />
 		<Unit filename="vcompress.cpp" />

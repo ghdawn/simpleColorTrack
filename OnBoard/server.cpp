@@ -15,6 +15,8 @@ extern "C" {
 #include "basestruct.h"
 #include "colortrack.h"
 #include "yuv2hsl.h"
+#include "gimbal.h"
+#include "serialport.h"
 using namespace std;
 
 const int MaxSendLength=65535;
@@ -29,6 +31,7 @@ int SendLength;
 Communication::Udp _udp(ListenPort,false);
 Communication::Udp::UdpPackage udpPackage;
 itr_protocol::StandSerialProtocol sspUdp;
+SerialPort sportobj;
 ColorTrack tracker;
 
 Config config;
@@ -59,7 +62,7 @@ void SSPReceivefuc(itr_protocol::StandSerialProtocol *SSP, itr_protocol::StandSe
     }
 }
 
-S32 SendResultPrepare(U8* Buffer,S32 Length)
+S32 SSPSend(U8* Buffer,S32 Length)
 {
 	memcpy(SendBuf,Buffer,Length);
 	for (int i = 0; i < Length; ++i)
@@ -90,18 +93,30 @@ void Init()
 
     itr_math::MathObjStandInit();
 
-    sspUdp.Init(0xA5 ,0x5A ,SendResultPrepare);//串口发送函数 代替 NULL
+    sspUdp.Init(0xA5 ,0x5A ,SSPSend);//串口发送函数 代替 NULL
     sspUdp.ProcessFunction[0]=&SSPReceivefuc;
-}
 
+    sportobj.Init("/dev/ttyUSB0",115200);
+}
+/*
+
+S32 SerialSendForSSP(U8* Buffer,S32 Length)
+{
+
+    return Length;
+}
+*/
 
 int main (int argc, char **argv)
 {
     Init();
     U8 tempbuff[100];
+    char**ControlData;
+    int controllength=0;
     F32 fps,x,y,Area;
     TimeClock clock;
     yuv2hsl yuv2hsl_obj;///用于yuv到hls转换
+
     int _size=Height[config.pixel]*Width[config.pixel];
 
     void *capture = capture_open("/dev/video0", Width[config.pixel], Height[config.pixel], PIX_FMT_YUV420P);
@@ -122,7 +137,6 @@ int main (int argc, char **argv)
         exit(-1);
     }
 
-
     // int tosleep = 1000000 / VIDEO_FPS;
     for (; ; )
     {
@@ -142,8 +156,6 @@ int main (int argc, char **argv)
         yuv2hsl_obj.doyuv2hsl(Width[config.pixel],Height[config.pixel],pic.data[0],pic.data[1],pic.data[2],
                               img_hs,img_hs+_size);
         //将HS转存入矩阵中
-        //TODO:可否直接用已申请好的内存直接生成矩阵?
-
         for(int i=0; i<_size; i++)
         {
             mat_H[i]=img_hs[i];
@@ -158,23 +170,23 @@ int main (int argc, char **argv)
             x=y=Area=-1;
             if(blocklist.size()>0)
                { printf("%f %f %f\n",blocklist[0].x,blocklist[0].y,blocklist[0].Area);
-               x=blocklist[0].x;
-               y=blocklist[0].y;
-               Area=blocklist[0].Area;
-               }
+                x=blocklist[0].x;
+                y=blocklist[0].y;
+                Area=blocklist[0].Area;
+                GimbalControl( x, y,ControlData,controllength);
+                sportobj.Send((unsigned char*)*ControlData,controllength);
+            }
         }
 
         // 压缩图像
 
         int rc = vc_compress(encoder, pic.data, pic.stride, &imgCompressData, &imgLength);
-        // printf("%d\n",rc );
         if (rc < 0)
         {
             continue;
         }
         fps=1000/clock.Tick();
         //用SSP封装，包括图像和跟踪结果
-        //数据最大长度226？
         SendLength=0;
         if(config.result==0)
         {
