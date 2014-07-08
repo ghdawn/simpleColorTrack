@@ -17,6 +17,7 @@ extern "C" {
 #include "yuv2hsl.h"
 #include "gimbal.h"
 #include "serialport.h"
+#define SIMPLEM
 using namespace std;
 
 const int MaxSendLength=65535;
@@ -42,35 +43,35 @@ void SSPReceivefuc(itr_protocol::StandSerialProtocol *SSP, itr_protocol::StandSe
 {
     switch(Package[0])
     {
-        case 0x31:
-            mode=Package[1];
-            break;
-        case 0x32:
+    case 0x31:
+        mode=Package[1];
+        break;
+    case 0x32:
 
-            break;
-        case 0x33:
-            config.color=Package[1];
-            config.result=Package[2];
-            break;
-        case 0x34:
-             config.fps=Package[1];
-            config.pixel=Package[2];
-            break;
-        //直接转发
-        default:
-            break;
+        break;
+    case 0x33:
+        config.color=Package[1];
+        config.result=Package[2];
+        break;
+    case 0x34:
+        config.fps=Package[1];
+        config.pixel=Package[2];
+        break;
+    //直接转发
+    default:
+        break;
     }
 }
 
 S32 SSPSend(U8* Buffer,S32 Length)
 {
-	memcpy(SendBuf,Buffer,Length);
-	for (int i = 0; i < Length; ++i)
-	{
-		printf("%X ",Buffer[i]);
-	}
-	printf("\n");
-	memcpy(SendBuf+Length,(void*)imgCompressData,imgLength);
+    memcpy(SendBuf,Buffer,Length);
+    for (int i = 0; i < Length; ++i)
+    {
+        printf("%X ",Buffer[i]);
+    }
+    printf("\n");
+    memcpy(SendBuf+Length,(void*)imgCompressData,imgLength);
     SendLength=Length+imgLength;
     return SendLength;
 }
@@ -95,14 +96,7 @@ void Init()
     GimbalInit();
     // sportobj.Init("/dev/ttyUSB0",115200);
 }
-/*
 
-S32 SerialSendForSSP(U8* Buffer,S32 Length)
-{
-
-    return Length;
-}
-*/
 
 int main (int argc, char **argv)
 {
@@ -111,15 +105,20 @@ int main (int argc, char **argv)
     char* ControlData;
     int controllength=0;
     F32 fps,x,y,Area;
+    int _width=Width[config.pixel],_height=Height[config.pixel];
+    int _size=_width*_width;
+#ifdef  SIMPLEM
+    int x_ever=0,y_ever=0,color_counter=0;
+#endif // SIMPLEM
     TimeClock clock;
     yuv2hsl yuv2hsl_obj;///用于yuv到hls转换
 
-    int _size=Height[config.pixel]*Width[config.pixel];
 
-    void *capture = capture_open("/dev/video0", Width[config.pixel], Height[config.pixel], PIX_FMT_YUV420P);
+
+    void *capture = capture_open("/dev/video0", _width, _height, PIX_FMT_YUV420P);
 
     U8 *img_hs=new U8[2*_size];
-    itr_math::Matrix mat_H(Height[config.pixel],Width[config.pixel]),mat_S(Height[config.pixel],Width[config.pixel]);
+    itr_math::Matrix mat_H(_height,_width),mat_S(_height,_width);
 
     if (!capture)
     {
@@ -127,7 +126,7 @@ int main (int argc, char **argv)
         exit(-1);
     }
 
-    void *encoder = vc_open(Width[config.pixel], Height[config.pixel], config.fps);
+    void *encoder = vc_open(_width, _height, config.fps);
     if (!encoder)
     {
         fprintf(stderr, "ERR: can't open x264 encoder\n");
@@ -150,15 +149,39 @@ int main (int argc, char **argv)
         //获取图像，进行RGB，HSL的转换
         Picture pic;
         capture_get_picture(capture, &pic);
-        yuv2hsl_obj.doyuv2hsl(Width[config.pixel],Height[config.pixel],pic.data[0],pic.data[1],pic.data[2],
+        yuv2hsl_obj.doyuv2hsl(_width,_height,pic.data[0],pic.data[1],pic.data[2],
                               img_hs,img_hs+_size);
         //将HS转存入矩阵中
+
+#ifdef  SIMPLEM
+        x_ever=0,y_ever=0,color_counter=0;
+        for(int i=0; i<_size; i++)
+        {
+            int tmpcolor=ColorTable[config.color];
+            if(abs(img_hs[i]-tmpcolor)<10&&abs(img_hs[i+_size]-tmpcolor)<25)
+                x_ever+=i/_width;
+            y_ever+=i%_width;
+            color_counter++;
+        }
+        x_ever/=color_counter;
+        y_ever/=color_counter;
+        printf("%f %f %f\n",x_ever,y_ever,color_counter);
+        x=x_ever;
+        y=y_ever;
+        Area=color_counter;
+        GimbalControl( x, y,&ControlData,controllength);
+        printf("Control:%d\n", controllength);
+        for (int i = 0; i < controllength; ++i)
+        {
+            printf("%x ",ControlData[i] );
+        }
+        printf("\n");
+#else
         for(int i=0; i<_size; i++)
         {
             mat_H[i]=img_hs[i];
             mat_S[i]=img_hs[i+_size];
         }
-
         //进行跟踪
         std::vector<itr_vision::Block> blocklist;
         if(mode==2)
@@ -166,21 +189,22 @@ int main (int argc, char **argv)
             blocklist=tracker.Track(mat_H,mat_S,ColorTable[config.color]);
             x=y=Area=-1;
             if(blocklist.size()>0)
-               { 
-                    printf("%f %f %f\n",blocklist[0].x,blocklist[0].y,blocklist[0].Area);
-                    x=blocklist[0].x;
-                    y=blocklist[0].y;
-                    Area=blocklist[0].Area;
-                    GimbalControl( x, y,&ControlData,controllength);
-                    printf("Control:%d\n", controllength);
-                    for (int i = 0; i < controllength; ++i)
-                    {
-                        printf("%x ",ControlData[i] );
-                    }
-                    printf("\n");
-                    // sportobj.Send((unsigned char*)*ControlData,controllength);
+            {
+                printf("%f %f %f\n",blocklist[0].x,blocklist[0].y,blocklist[0].Area);
+                x=blocklist[0].x;
+                y=blocklist[0].y;
+                Area=blocklist[0].Area;
+                GimbalControl( x, y,&ControlData,controllength);
+                printf("Control:%d\n", controllength);
+                for (int i = 0; i < controllength; ++i)
+                {
+                    printf("%x ",ControlData[i] );
+                }
+                printf("\n");
+                // sportobj.Send((unsigned char*)*ControlData,controllength);
             }
         }
+#endif // SIMPLEM
 
         // 压缩图像
 
@@ -194,8 +218,8 @@ int main (int argc, char **argv)
         SendLength=0;
         if(config.result==0)
         {
-        	int offset=0;
-        	tempbuff[offset++]=0x40;
+            int offset=0;
+            tempbuff[offset++]=0x40;
             tempbuff[offset++]=mode;
             memcpy(tempbuff+offset,(void*)&fps,4);
             offset+=4;
