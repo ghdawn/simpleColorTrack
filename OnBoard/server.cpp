@@ -159,9 +159,11 @@ int main (int argc, char **argv)
         {
             int tmpcolor=ColorTable[config.color];
             if(abs(img_hs[i]-tmpcolor)<10&&abs(img_hs[i+_size]-tmpcolor)<25)
-                x_ever+=i/_width;
-            y_ever+=i%_width;
-            color_counter++;
+            {
+                y_ever+=i/_width;
+                x_ever+=i%_width;
+                color_counter++;
+            }
         }
         x_ever/=color_counter;
         y_ever/=color_counter;
