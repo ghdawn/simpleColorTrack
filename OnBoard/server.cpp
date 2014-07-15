@@ -17,6 +17,7 @@ extern "C" {
 #include "yuv2hsl.h"
 #include "gimbal.h"
 #include "serialport.h"
+
 #define SIMPLEM
 using namespace std;
 
@@ -155,10 +156,14 @@ int main (int argc, char **argv)
 
 #ifdef  SIMPLEM
         x_ever=0,y_ever=0,color_counter=0;
+       // int tmpcolor=ColorTable[config.color];
+        /*
+    BObject.Threshold(H,20,5);
+    BObject.Threshold(S,90,50);
+        */
         for(int i=0; i<_size; i++)
         {
-            int tmpcolor=ColorTable[config.color];
-            if(abs(img_hs[i]-tmpcolor)<10&&abs(img_hs[i+_size]-tmpcolor)<25)
+            if(img_hs[i]>5&&img_hs[i]<20&&img_hs[i+_size]<90&&img_hs[i+_size]>50)
             {
                 y_ever+=i/_width;
                 x_ever+=i%_width;
