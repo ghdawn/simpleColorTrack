@@ -19,6 +19,7 @@ extern "C" {
 #include "serialport.h"
 
 #define SIMPLEM
+#define TIMEEVALUATION
 using namespace std;
 
 const int MaxSendLength=65535;
@@ -85,7 +86,7 @@ void Init()
     config.pixel=0;
     config.fps=30;
 
-    udpPackage.IP="192.168.1.112";
+    udpPackage.IP="192.168.0.116";
     // udpPackage.IP="0.0.0.0";
     udpPackage.port=SendPort;
 
@@ -133,10 +134,15 @@ int main (int argc, char **argv)
         fprintf(stderr, "ERR: can't open x264 encoder\n");
         exit(-1);
     }
-
+#ifdef TIMEEVALUATION
+    static float timeyuv2hsl=0,timex264=0,timetrack=0,timeholy=0;
+#endif // TIMEEVALUATION
     // int tosleep = 1000000 / VIDEO_FPS;
     for (; ; )
     {
+#ifdef TIMEEVALUATION
+    timeyuv2hsl=0,timex264=0,timetrack=0,timeholy=0;
+#endif // TIMEEVALUATION
         if(_udp.Receive(RecBuf,MaxRecLength))
         {
             //使用SSP进行解包
@@ -152,43 +158,60 @@ int main (int argc, char **argv)
         capture_get_picture(capture, &pic);
         yuv2hsl_obj.doyuv2hsl(_width,_height,pic.data[0],pic.data[1],pic.data[2],
                               img_hs,img_hs+_size);
+#ifdef TIMEEVALUATION
+        timeyuv2hsl=clock.Tick();
+#endif // TIMEEVALUATION
         //将HS转存入矩阵中
 
 #ifdef  SIMPLEM
         x_ever=0,y_ever=0,color_counter=0;
-       // int tmpcolor=ColorTable[config.color];
+        // int tmpcolor=ColorTable[config.color];
         /*
-    BObject.Threshold(H,20,5);
-    BObject.Threshold(S,90,50);
+        BObject.Threshold(H,20,5);
+        BObject.Threshold(S,90,50);
         */
-        for(int i=0; i<_size; i++)
+        unsigned int ind=0;
+        for(int i=0; i<_height; i++)
         {
-            if(img_hs[i]>5&&img_hs[i]<20&&img_hs[i+_size]<90&&img_hs[i+_size]>50)
+            for(int j=0; j<_width; j++)
             {
-                y_ever+=i/_width;
-                x_ever+=i%_width;
-                color_counter++;
+                if(img_hs[ind]>5&&img_hs[ind]<20&&img_hs[ind+_size]<75&&img_hs[ind+_size]>65)
+                {
+                    y_ever+=i;
+                    x_ever+=j;
+                    color_counter++;
+                }
+                ind++;
             }
         }
         if(color_counter)
         {
             x_ever/=color_counter;
             y_ever/=color_counter;
-            printf("%d %d %d\n",x_ever,y_ever,color_counter);
             x=x_ever;
             y=y_ever;
             Area=color_counter;
             GimbalControl( x, y,&ControlData,controllength);
+#ifndef TIMEEVALUATION
+            printf("%d %d %d\n",x_ever,y_ever,color_counter);
             printf("Control:%d\n", controllength);
             for (int i = 0; i < controllength; ++i)
             {
                 printf("%x ",ControlData[i] );
             }
             printf("\n");
-        }
-        else
-            printf("0 0 0\n");
+#endif // TIMEEVALUATION
 
+        }
+
+#ifndef TIMEEVALUATION
+        else
+        printf("0 0 0\n");
+#endif // TIMEEVALUATION
+
+#ifdef TIMEEVALUATION
+        timetrack=clock.Tick();
+#endif // TIMEEVALUATION
 #else
         for(int i=0; i<_size; i++)
         {
@@ -227,6 +250,9 @@ int main (int argc, char **argv)
             continue;
         }
         fps=1000/clock.Tick();
+#ifdef TIMEEVALUATION
+        timex264=fps*1000;
+#endif // TIMEEVALUATION
         //用SSP封装，包括图像和跟踪结果
         SendLength=0;
         if(config.result==0)
@@ -248,7 +274,14 @@ int main (int argc, char **argv)
         // 发送结果
         udpPackage.pbuffer=SendBuf;
         udpPackage.len=SendLength;
+#ifndef TIMEEVALUATION
         printf("Len:%d\n",SendLength );
+#else
+        timeholy=timeyuv2hsl+timetrack+timex264;
+        printf("yuv2hsl:%2f\tratio: %2f\n",timeyuv2hsl,timeyuv2hsl/timeholy*100);
+        printf("track  :%2f\tratio: %2f\n",timetrack,timetrack/timeholy*100);
+        printf("x264c  :%2f\tratio: %2f\n",timex264,timex264/timeholy*100);
+#endif // TIMEEVALUATION
         _udp.Send(udpPackage);
 
         // 等
