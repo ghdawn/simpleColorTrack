@@ -106,10 +106,10 @@ int main (int argc, char **argv)
     char* ControlData;
     int controllength=0;
     F32 fps,x,y,Area;
-    int _width=Width[config.pixel],_height=Height[config.pixel];
-    int _size=_width*_width;
+    unsigned int _width=Width[config.pixel],_height=Height[config.pixel];
+    unsigned int _size=_width*_height;
 #ifdef  SIMPLEM
-    int x_ever=0,y_ever=0,color_counter=0;
+    unsigned int x_ever=0,y_ever=0,color_counter=0;
 #endif // SIMPLEM
     TimeClock clock;
     yuv2hsl yuv2hsl_obj;///用于yuv到hls转换
@@ -170,19 +170,25 @@ int main (int argc, char **argv)
                 color_counter++;
             }
         }
-        x_ever/=color_counter;
-        y_ever/=color_counter;
-        printf("%f %f %f\n",x_ever,y_ever,color_counter);
-        x=x_ever;
-        y=y_ever;
-        Area=color_counter;
-        GimbalControl( x, y,&ControlData,controllength);
-        printf("Control:%d\n", controllength);
-        for (int i = 0; i < controllength; ++i)
+        if(color_counter)
         {
-            printf("%x ",ControlData[i] );
+            x_ever/=color_counter;
+            y_ever/=color_counter;
+            printf("%d %d %d\n",x_ever,y_ever,color_counter);
+            x=x_ever;
+            y=y_ever;
+            Area=color_counter;
+            GimbalControl( x, y,&ControlData,controllength);
+            printf("Control:%d\n", controllength);
+            for (int i = 0; i < controllength; ++i)
+            {
+                printf("%x ",ControlData[i] );
+            }
+            printf("\n");
         }
-        printf("\n");
+        else
+            printf("0 0 0\n");
+
 #else
         for(int i=0; i<_size; i++)
         {
