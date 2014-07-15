@@ -249,9 +249,12 @@ int main (int argc, char **argv)
         {
             continue;
         }
-        fps=1000/clock.Tick();
+
 #ifdef TIMEEVALUATION
-        timex264=fps*1000;
+        timex264=clock.Tick();
+        fps=1000/timex264;
+#else
+        fps=1000/clock.Tick();
 #endif // TIMEEVALUATION
         //用SSP封装，包括图像和跟踪结果
         SendLength=0;
