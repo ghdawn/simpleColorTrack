@@ -6,7 +6,7 @@ class yuv2hsl
 {
     public:
         yuv2hsl();
-        void doyuv2hsl(int Width, int Height,U8*Y,U8*U,U8*V,U8*H,U8*S);
+        void doyuv2hsl(int Width, int Height,U8*Y,U8*U,U8*V,F32 *H,F32 *S);
     protected:
     private:
         void RGB2HSL(int *RGB, float *HSL);
