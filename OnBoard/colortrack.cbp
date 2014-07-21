@@ -13,21 +13,26 @@
 				<Option compiler="gcc" />
 				<Compiler>
 					<Add option="-g" />
-					<Add directory="../../iTRLib/3rdparty/alglib" />
-					<Add directory="../../iTRLib/itralgorithm" />
-					<Add directory="../../iTRLib/itrbase" />
-					<Add directory="../../iTRLib/itrvision" />
-					<Add directory="../../iTRLib/itrdevice" />
+					<Add directory="../../../../../media/odroid/CODE/iTRLib/3rdparty/alglib" />
+					<Add directory="../../../../../media/odroid/CODE/iTRLib/itralgorithm" />
+					<Add directory="../../../../../media/odroid/CODE/iTRLib/itrbase" />
+					<Add directory="../../../../../media/odroid/CODE/iTRLib/itrvision" />
+					<Add directory="../../../../../media/odroid/CODE/iTRLib/itrdevice" />
 					<Add directory="include" />
+					<Add directory="../../../../../media/odroid/CODE/iTRLib/itrneon" />
+					<Add directory="../../x264/source" />
 				</Compiler>
 				<Linker>
 					<Add library="avcodec" />
 					<Add library="swscale" />
 					<Add library="avutil" />
-					<Add library="x264" />
 					<Add library="pthread" />
-					<Add library="../../iTRLib/itrbase/bin/debug/libitrbase.a" />
-					<Add library="../../iTRLib/itrvision/bin/debug/libitrvision.a" />
+					<Add library="../../x264/source/libx264.a" />
+					<Add library="../../../../../media/odroid/CODE/iTRLib/itrbase/bin/debug/libitrbase.a" />
+					<Add library="../../../../../media/odroid/CODE/iTRLib/itrneon/bin/debug/libmathneon.a" />
+					<Add library="../../../../../media/odroid/CODE/iTRLib/itrvision/bin/debug/libitrvision.a" />
+					<Add library="../../../../../media/odroid/CODE/iTRLib/3rdparty/alglib/bin/debug/libalglib.a" />
+					<Add library="../../../../../media/odroid/CODE/iTRLib/itralgorithm/bin/debug/libitralgorithm.a" />
 				</Linker>
 			</Target>
 			<Target title="Release">
