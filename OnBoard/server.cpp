@@ -114,7 +114,7 @@ void Init()
     config.pixel=0;
     config.fps=30;
 
-    udpPackage.IP="192.168.0.110";
+    udpPackage.IP="192.168.0.114";
     // udpPackage.IP="0.0.0.0";
     udpPackage.port=SendPort;
 
@@ -200,7 +200,7 @@ void* camera_thread(void *name)
             continue;
         }
         capture_get_picture(capture, pic);
-        yuvBuffer.SetBufferTRead(pic);
+
         img_hs=matBuffer.GetBufferToWrite();    
         while(img_hs==NULL)
         {
@@ -210,6 +210,8 @@ void* camera_thread(void *name)
         
         yuv2hsl_obj.doyuv2hsl(_width,_height,pic->data[0],pic->data[1],pic->data[2],
           img_hs,img_hs+_size);
+
+        yuvBuffer.SetBufferTRead(pic);
         matBuffer.SetBufferTRead(img_hs);
         printf("New Img OK at time=%d\n",tc.Tick());
     }
