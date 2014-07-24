@@ -16,7 +16,6 @@ extern "C" {
 #include "colortrack.h"
 #include "yuv2hsl.h"
 #include "gimbal.h"
-#include "serialport.h"
 
 #define SIMPLEM
 #define TIMEEVALUATION
@@ -32,9 +31,9 @@ const void *imgCompressData;
 int imgLength;
 
 //控制指令指针
-char* ControlData;
+char* controlData;
 //控制指令的长度
-int controllength=0;
+int controlLength=0;
 
 
 //UDP发送接收缓冲区
@@ -48,7 +47,11 @@ itr_system::Udp _udp(ListenPort,false);
 itr_system::Udp::UdpPackage udpPackage;
 itr_system::AsyncBuffer<Picture*> yuvBuffer;
 itr_system::AsyncBuffer<F32*> matBuffer;
+itr_system::SerialPort uart;
+bool uartOK=false;
+
 itr_protocol::StandSerialProtocol sspUdp;
+
 ColorTrack tracker;
 Config config;
 
@@ -67,6 +70,7 @@ U8 mode=2;
 
 pthread_mutex_t mutexTrack,mutexCompress;
 bool newImg=false,newResult=false;
+
 ///SSP接受数据，进行命令解析
 void SSPReceivefuc(itr_protocol::StandSerialProtocol *SSP, itr_protocol::StandSerialFrameStruct *SSFS,U8 *Package,S32 PackageLength)
 {
@@ -122,6 +126,8 @@ void Init()
 
     sspUdp.Init(0xA5 ,0x5A ,SSPSend);//串口发送函数 代替 NULL
     sspUdp.ProcessFunction[0]=&SSPReceivefuc;
+
+    uartOK=(uart.Init("/dev/USBtty0",115200)==0);
 
     GimbalInit();
 
@@ -261,7 +267,7 @@ void* track_thread(void* name)
             y=y_ever;
             Area=color_counter;
             fps=1000/tc.Tick();
-            GimbalControl( x, y,&ControlData,controllength);
+            GimbalControl( x, y,&controlData,controlLength);
 printf("Track OK, at fps=%f\n", fps);
             // newResult=true;
             pthread_mutex_unlock(&mutexTrack);
@@ -323,6 +329,8 @@ int main (int argc, char **argv)
                 offset+=4;
                 sspUdp.SSPSendPackage(0,tempbuff,offset);
             }
+            newImg=false;
+            newResult=false;
             pthread_mutex_unlock(&mutexCompress);
             pthread_mutex_unlock(&mutexTrack);
             // 发送结果
@@ -330,8 +338,9 @@ int main (int argc, char **argv)
             udpPackage.len=SendLength;
             _udp.Send(udpPackage);
 
-            newImg=false;
-            newResult=false;
+            GimbalControl(x,y,controlData,controlLength);
+            if(uartOK)
+                uart.Send(controlData,controlLength);
             printf("Send OK at time=%d\n",tc.Tick());
 
         }
