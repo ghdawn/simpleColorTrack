@@ -338,9 +338,9 @@ int main (int argc, char **argv)
             udpPackage.len=SendLength;
             _udp.Send(udpPackage);
 
-            GimbalControl(x,y,controlData,controlLength);
+            GimbalControl(x,y,&controlData,controlLength);
             if(uartOK)
-                uart.Send(controlData,controlLength);
+                uart.Send((unsigned char*)controlData,controlLength);
             printf("Send OK at time=%d\n",tc.Tick());
 
         }
