@@ -19,8 +19,8 @@ std::vector<itr_vision::Block> ColorTrack::Track( Matrix &H, Matrix &S, int colo
     itr_vision::IOpnm::WritePGMFile("S1.pgm",S);
     const float dh=10;
     const float ds=20;
-    BObject.Threshold(H,color+50,0);
-    BObject.Threshold(S,100,50);
+    BObject.Threshold(H,color+20,color-20);
+    BObject.Threshold(S,100,70);
     int _size=H.GetCol()*H.GetRow();
     for(int i=0; i<_size; ++i)
     {
