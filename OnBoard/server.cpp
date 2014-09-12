@@ -47,6 +47,8 @@ itr_system::Udp _udp(ListenPort,false);
 itr_system::Udp::UdpPackage udpPackage;
 itr_system::AsyncBuffer<Picture*> yuvBuffer;
 itr_system::AsyncBuffer<F32*> matBuffer;
+itr_system::AsyncBuffer<U8*> trackBuffer;
+itr_system::AsyncBuffer<U8*> compressBuffer;
 itr_system::SerialPort uart;
 bool uartOK=false;
 
@@ -105,8 +107,16 @@ S32 SSPSend(U8* Buffer,S32 Length)
     //     printf("%X ",Buffer[i]);
     // }
     // printf("\n");
-    memcpy(SendBuf+Length,(void*)imgCompressData,imgLength);
-    SendLength=Length+imgLength;
+    U8* img=compressBuffer.GetBufferToRead();
+    if(img==NULL)
+    {
+        continue;
+    }
+    memcpy(SendBuf+Length,(U8*)(img+2),*((int*)img));
+    SendLength=Length+*((int*)img);
+
+    compressBuffer.SetBufferToWrite(img);
+
     return SendLength;
 }
 
@@ -141,6 +151,12 @@ void Init()
     matBuffer.Init(2);
     matBuffer.AddBufferToList(new F32[2*_size]);
     matBuffer.AddBufferToList(new F32[2*_size]);
+    trackBuffer.Init(2);
+    trackBuffer.AddBufferToList(new U8[16]);
+    trackBuffer.AddBufferToList(new U8[16]);
+    compressBuffer.Init(2);
+    compressBuffer.AddBufferToList(new U8[2*_size]);
+    compressBuffer.AddBufferToList(new U8[2*_size]);
 }
 
 void* x264_thread(void* name)
@@ -152,24 +168,32 @@ void* x264_thread(void* name)
         exit(-1);
     }
     Picture *pic;
+    U8* _imgcomp;
     TimeClock tc;
     tc.Tick();
     while(1)
     {
-        
+
         // 压缩图像
         pic=yuvBuffer.GetBufferToRead();
         if (pic==NULL)
         {
             // usleep(10);
             continue;
-        }        
+        }
         pthread_mutex_lock(&mutexCompress);
-        int rc = vc_compress(encoder, pic->data, pic->stride, &imgCompressData, &imgLength);
+
+        _imgcomp=compressBuffer.GetBufferToRead();
+        if(_imgcomp==NULL)
+        {
+                continue;
+        }
+        int rc = vc_compress(encoder, pic->data, pic->stride, (void*)(_imgcomp+2), (int*) _imgcomp);  //前两位是压缩后长度
         if(rc>0)
             newImg=true;
-        
+
         yuvBuffer.SetBufferToWrite(pic);
+        compressBuffer.SetBufferToWrite(_imgcomp);
         if (rc < 0)
         {
             continue;
@@ -181,10 +205,10 @@ void* x264_thread(void* name)
     vc_close(encoder);
 }
 
-void* camera_thread(void *name) 
+void* camera_thread(void *name)
 {
     void *capture = capture_open("/dev/video0", _width, _height, PIX_FMT_YUV420P);
-    
+
     if (!capture)
     {
         fprintf(stderr, "ERR: can't open '/dev/video0'\n");
@@ -207,13 +231,13 @@ void* camera_thread(void *name)
         }
         capture_get_picture(capture, pic);
 
-        img_hs=matBuffer.GetBufferToWrite();    
+        img_hs=matBuffer.GetBufferToWrite();
         while(img_hs==NULL)
         {
             // usleep(10);
-            img_hs=matBuffer.GetBufferToWrite();    
+            img_hs=matBuffer.GetBufferToWrite();
         }
-        
+
         yuv2hsl_obj.doyuv2hsl(_width,_height,pic->data[0],pic->data[1],pic->data[2],
           img_hs,img_hs+_size);
 
@@ -227,8 +251,10 @@ void* camera_thread(void *name)
 
 void* track_thread(void* name)
 {
-    
+
     F32* img_hs;
+    U8* tempbuff;
+    U8 offset=0;
     int x_ever=0,y_ever=0,color_counter=0;
     TimeClock tc;
     tc.Tick();
@@ -263,15 +289,28 @@ void* track_thread(void* name)
                 x_ever/=color_counter;
                 y_ever/=color_counter;
             }
-            x=x_ever;
-            y=y_ever;
-            Area=color_counter;
-            fps=1000/tc.Tick();
+//            x=x_ever;
+//            y=y_ever;
+//            Area=color_counter;
+//            fps=1000/tc.Tick();
+            tempbuff=trackBuffer.GetBufferToRead();
+            offset=0;
+            memcpy(tempbuff+offset,(void*)&fps,4);
+            offset+=4;
+            memcpy(tempbuff+offset,(void*)&x,4);
+            offset+=4;
+            memcpy(tempbuff+offset,(void*)&y,4);
+            offset+=4;
+            memcpy(tempbuff+offset,(void*)&Area,4);
+            offset+=4;
+
+            trackBuffer.SetBufferToWrite(tempbuff);
+
             GimbalControl( x, y,&controlData,controlLength);
 printf("Track OK, at fps=%f\n", fps);
             // newResult=true;
             pthread_mutex_unlock(&mutexTrack);
-            
+
         }
         matBuffer.SetBufferToWrite(img_hs);
     }
@@ -283,14 +322,14 @@ int main (int argc, char **argv)
     Init();
 
     //新建图像采集线程，图像压缩线程
-    pthread_t tidx264,tidcam,tidtrack; 
+    pthread_t tidx264,tidcam,tidtrack;
 
     U8 tempbuff[100];
     TimeClock tc;
     tc.Tick();
     pthread_mutex_init(&mutexTrack,NULL);
     pthread_mutex_init(&mutexCompress,NULL);
-    pthread_create(&tidcam, NULL, camera_thread, (void *)( "Camera" )); 
+    pthread_create(&tidcam, NULL, camera_thread, (void *)( "Camera" ));
     pthread_create(&tidx264, NULL, x264_thread, (void *)( "x264" ));
     pthread_create(&tidtrack, NULL, track_thread, (void *)( "Track" ));
 
@@ -319,14 +358,16 @@ int main (int argc, char **argv)
                 int offset=0;
                 tempbuff[offset++]=0x40;
                 tempbuff[offset++]=mode;
-                memcpy(tempbuff+offset,(void*)&fps,4);
-                offset+=4;
-                memcpy(tempbuff+offset,(void*)&x,4);
-                offset+=4;
-                memcpy(tempbuff+offset,(void*)&y,4);
-                offset+=4;
-                memcpy(tempbuff+offset,(void*)&Area,4);
-                offset+=4;
+
+                U8* tracktemp=trackBuffer.GetBufferToRead();
+                if(tracktemp==NULL)
+                {
+                    continue;
+                }
+                memcpy(tempbuff+offset,(void*)&tracktemp,16);
+                offset+=16;
+                trackBuffer.SetBufferToWrite(tracktemp);
+
                 sspUdp.SSPSendPackage(0,tempbuff,offset);
             }
             newImg=false;
@@ -346,8 +387,8 @@ int main (int argc, char **argv)
         }
         // usleep(30);
 
-    }    
-    
+    }
+
     return 0;
 }
 
