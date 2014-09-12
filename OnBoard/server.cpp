@@ -108,9 +108,9 @@ S32 SSPSend(U8* Buffer,S32 Length)
     // }
     // printf("\n");
     U8* img=compressBuffer.GetBufferToRead();
-    if(img==NULL)
+    while(img==NULL)
     {
-        continue;
+         img=compressBuffer.GetBufferToRead();
     }
     memcpy(SendBuf+Length,(U8*)(img+2),*((int*)img));
     SendLength=Length+*((int*)img);
@@ -184,13 +184,16 @@ void* x264_thread(void* name)
         pthread_mutex_lock(&mutexCompress);
 
         _imgcomp=compressBuffer.GetBufferToRead();
-        if(_imgcomp==NULL)
+        if (_imgcomp==NULL)
         {
-                continue;
+            continue;
         }
-        int rc = vc_compress(encoder, pic->data, pic->stride, (void*)(_imgcomp+2), (int*) _imgcomp);  //前两位是压缩后长度
+
+        int rc = vc_compress(encoder, pic->data, pic->stride,&imgCompressData , & imgLength);  //前两位是压缩后长度
         if(rc>0)
             newImg=true;
+        *(int*)_imgcomp=imgLength;
+        memcpy(_imgcomp+2,imgCompressData,imgLength);
 
         yuvBuffer.SetBufferToWrite(pic);
         compressBuffer.SetBufferToWrite(_imgcomp);
@@ -232,10 +235,9 @@ void* camera_thread(void *name)
         capture_get_picture(capture, pic);
 
         img_hs=matBuffer.GetBufferToWrite();
-        while(img_hs==NULL)
+        if(img_hs==NULL)
         {
-            // usleep(10);
-            img_hs=matBuffer.GetBufferToWrite();
+           continue;
         }
 
         yuv2hsl_obj.doyuv2hsl(_width,_height,pic->data[0],pic->data[1],pic->data[2],
@@ -294,6 +296,10 @@ void* track_thread(void* name)
 //            Area=color_counter;
 //            fps=1000/tc.Tick();
             tempbuff=trackBuffer.GetBufferToRead();
+            if(tempbuff==NULL)
+            {
+                continue;
+            }
             offset=0;
             memcpy(tempbuff+offset,(void*)&fps,4);
             offset+=4;
