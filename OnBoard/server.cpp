@@ -190,17 +190,19 @@ void* x264_thread(void* name)
         }
 
         int rc = vc_compress(encoder, pic->data, pic->stride,&imgCompressData , & imgLength);  //前两位是压缩后长度
-        if(rc>0)
-            newImg=true;
+
+        yuvBuffer.SetBufferToWrite(pic);
+        if (rc < 0)
+        {
+            compressBuffer.SetBufferToWrite(_imgcomp);
+            continue;
+        }
+
         *(int*)_imgcomp=imgLength;
         memcpy(_imgcomp+4,imgCompressData,imgLength);
 
-        yuvBuffer.SetBufferToWrite(pic);
         compressBuffer.SetBufferToRead(_imgcomp);
-        if (rc < 0)
-        {
-            continue;
-        }
+
         // pthread_mutex_unlock(&mutexCompress);
         printf("Compress OK at time=%d\n",tc.Tick());
     }
@@ -229,7 +231,7 @@ void* camera_thread(void *name)
         pic=yuvBuffer.GetBufferToWrite();
         if (pic==NULL)
         {
-            // usleep(10);
+            usleep(10);
             continue;
         }
         capture_get_picture(capture, pic);
@@ -291,10 +293,10 @@ void* track_thread(void* name)
                 x_ever/=color_counter;
                 y_ever/=color_counter;
             }
-           x=x_ever;
-           y=y_ever;
-           Area=color_counter;
-           fps=1000/tc.Tick();
+            x=x_ever;
+            y=y_ever;
+            Area=color_counter;
+            fps=1000/tc.Tick();
             tempbuff=trackBuffer.GetBufferToWrite();
             if(tempbuff==NULL)
             {
@@ -349,6 +351,7 @@ int main (int argc, char **argv)
         }
         if (mode==0)
         {
+            usleep(10);
             continue;
         }
         //获取图像，进行RGB，HSL的转换
@@ -358,44 +361,32 @@ int main (int argc, char **argv)
         SendLength=0;
         if(newImg && (config.result==0))
         {
-            // pthread_mutex_lock(&mutexCompress);
-            // pthread_mutex_lock(&mutexTrack);
             {
+
+
+                U8* tracktemp=trackBuffer.GetBufferToRead();
+
+                if(tracktemp==NULL)
+                {
+                    usleep(10);
+                    continue;
+                }
                 int offset=0;
                 tempbuff[offset++]=0x40;
                 tempbuff[offset++]=mode;
-
-                U8* tracktemp=trackBuffer.GetBufferToRead();
-                for (int i = 0; i < 16; ++i)
-                {
-                    printf("%X ",tracktemp[i] );
-                }
-                printf("\n");
-                if(tracktemp==NULL)
-                {
-                    continue;
-                }
                 MemoryCopy(tempbuff+offset,(void*)tracktemp,16);
-
                 offset+=16;
-                for (int i = 0; i < 18; ++i)
-                {
-                    printf("%X ",tempbuff[i] );
-                }
-                printf("\n");
                 sspUdp.SSPSendPackage(0,tempbuff,offset);
                 trackBuffer.SetBufferToWrite(tracktemp);
             }
             newImg=false;
             newResult=false;
-            // pthread_mutex_unlock(&mutexCompress);
-            // pthread_mutex_unlock(&mutexTrack);
+
             // 发送结果
             udpPackage.pbuffer=SendBuf;
             udpPackage.len=SendLength;
             _udp.Send(udpPackage);
 
-            // GimbalControl(x,y,&controlData,controlLength);
             if(uartOK)
                 uart.Send((unsigned char*)controlData,controlLength);
             printf("Send OK at time=%d\n",tc.Tick());
