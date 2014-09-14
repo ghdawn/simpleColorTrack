@@ -183,10 +183,11 @@ void* x264_thread(void* name)
         }
         // pthread_mutex_lock(&mutexCompress);
 
-        _imgcomp=compressBuffer.GetBufferToWrite();
-        if (_imgcomp==NULL)
+        
+        while (_imgcomp==NULL)
         {
-            continue;
+            usleep(10);
+            _imgcomp=compressBuffer.GetBufferToWrite();    
         }
 
         int rc = vc_compress(encoder, pic->data, pic->stride,&imgCompressData , & imgLength);  //前两位是压缩后长度
@@ -359,30 +360,26 @@ int main (int argc, char **argv)
 
         //用SSP封装，包括图像和跟踪结果
         SendLength=0;
-        if(newImg && (config.result==0))
+        if(config.result==0)
         {
+            int offset=0;
+            memset(tempbuff,0,sizeof(tempbuff));
+            tempbuff[offset++]=0x40;
+            tempbuff[offset++]=mode;
+            if(mode==2)
             {
-
-
                 U8* tracktemp=trackBuffer.GetBufferToRead();
-
                 if(tracktemp==NULL)
                 {
                     usleep(10);
                     continue;
                 }
-                int offset=0;
-                tempbuff[offset++]=0x40;
-                tempbuff[offset++]=mode;
                 MemoryCopy(tempbuff+offset,(void*)tracktemp,16);
-                offset+=16;
-                sspUdp.SSPSendPackage(0,tempbuff,offset);
                 trackBuffer.SetBufferToWrite(tracktemp);
             }
-            newImg=false;
-            newResult=false;
-
-            // 发送结果
+            offset+=16;
+            sspUdp.SSPSendPackage(0,tempbuff,offset);
+                // 发送结果
             udpPackage.pbuffer=SendBuf;
             udpPackage.len=SendLength;
             _udp.Send(udpPackage);
@@ -390,10 +387,7 @@ int main (int argc, char **argv)
             if(uartOK)
                 uart.Send((unsigned char*)controlData,controlLength);
             printf("Send OK at time=%d\n",tc.Tick());
-
         }
-        // usleep(30);
-
     }
 
     return 0;
