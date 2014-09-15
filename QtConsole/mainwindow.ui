@@ -1,0 +1,234 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>670</width>
+    <height>587</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>MainWindow</string>
+  </property>
+  <widget class="QWidget" name="centralWidget">
+   <widget class="QTabWidget" name="Widget">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>40</y>
+      <width>631</width>
+      <height>321</height>
+     </rect>
+    </property>
+    <property name="currentIndex">
+     <number>0</number>
+    </property>
+    <widget class="QWidget" name="tab_2">
+     <attribute name="title">
+      <string>目标位置显示</string>
+     </attribute>
+     <widget class="QWidget" name="radarWidget" native="true">
+      <property name="geometry">
+       <rect>
+        <x>50</x>
+        <y>10</y>
+        <width>531</width>
+        <height>281</height>
+       </rect>
+      </property>
+     </widget>
+    </widget>
+    <widget class="QWidget" name="tab">
+     <attribute name="title">
+      <string>主界面</string>
+     </attribute>
+     <widget class="QTableView" name="tableView">
+      <property name="geometry">
+       <rect>
+        <x>30</x>
+        <y>0</y>
+        <width>591</width>
+        <height>371</height>
+       </rect>
+      </property>
+     </widget>
+    </widget>
+   </widget>
+   <widget class="QTextBrowser" name="textBrowser">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>390</y>
+      <width>171</width>
+      <height>131</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>370</y>
+      <width>54</width>
+      <height>12</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>信号测试</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_2">
+    <property name="geometry">
+     <rect>
+      <x>470</x>
+      <y>10</y>
+      <width>81</width>
+      <height>21</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>图像捕捉</string>
+    </property>
+   </widget>
+   <widget class="QWidget" name="layoutWidget">
+    <property name="geometry">
+     <rect>
+      <x>0</x>
+      <y>0</y>
+      <width>269</width>
+      <height>33</height>
+     </rect>
+    </property>
+    <layout class="QHBoxLayout" name="horizontalLayout">
+     <item>
+      <widget class="QPushButton" name="pushButton">
+       <property name="text">
+        <string>全部停止</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pushButton_2">
+       <property name="text">
+        <string>图像采集</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pushButton_3">
+       <property name="text">
+        <string>跟踪</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </widget>
+   <widget class="QPushButton" name="pushButton_4">
+    <property name="geometry">
+     <rect>
+      <x>250</x>
+      <y>430</y>
+      <width>75</width>
+      <height>23</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>发送指令</string>
+    </property>
+   </widget>
+   <widget class="QWidget" name="layoutWidget">
+    <property name="geometry">
+     <rect>
+      <x>340</x>
+      <y>400</y>
+      <width>109</width>
+      <height>136</height>
+     </rect>
+    </property>
+    <layout class="QVBoxLayout" name="verticalLayout">
+     <item>
+      <layout class="QHBoxLayout" name="horizontalLayout_2">
+       <item>
+        <widget class="QLabel" name="label_3">
+         <property name="text">
+          <string>帧率</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QDoubleSpinBox" name="doubleSpinBox"/>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <layout class="QHBoxLayout" name="horizontalLayout_3">
+       <item>
+        <widget class="QLabel" name="label_4">
+         <property name="text">
+          <string>x</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QDoubleSpinBox" name="doubleSpinBox_2"/>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <layout class="QHBoxLayout" name="horizontalLayout_4">
+       <item>
+        <widget class="QLabel" name="label_5">
+         <property name="text">
+          <string>y</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QDoubleSpinBox" name="doubleSpinBox_3"/>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <layout class="QHBoxLayout" name="horizontalLayout_5">
+       <item>
+        <widget class="QLabel" name="label_6">
+         <property name="text">
+          <string>area</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QDoubleSpinBox" name="doubleSpinBox_4"/>
+       </item>
+      </layout>
+     </item>
+    </layout>
+   </widget>
+  </widget>
+  <widget class="QMenuBar" name="menuBar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>670</width>
+     <height>25</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="QToolBar" name="mainToolBar">
+   <attribute name="toolBarArea">
+    <enum>TopToolBarArea</enum>
+   </attribute>
+   <attribute name="toolBarBreak">
+    <bool>false</bool>
+   </attribute>
+  </widget>
+  <widget class="QStatusBar" name="statusBar"/>
+ </widget>
+ <layoutdefault spacing="6" margin="11"/>
+ <resources/>
+ <connections/>
+</ui>

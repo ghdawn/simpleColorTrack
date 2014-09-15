@@ -22,7 +22,7 @@ extern "C" {
 using namespace std;
 
 const int MaxSendLength=65535;
-const int MaxRecLength=20;
+const int MaxRecLength=25;
 const int ListenPort=9031,SendPort=9032;
 
 //压缩后的图像数据指针
@@ -70,30 +70,33 @@ F32 fps,x,y,Area;
 */
 U8 mode=2;
 
-pthread_mutex_t mutexTrack,mutexCompress;
-bool newImg=false,newResult=false;
-
 ///SSP接受数据，进行命令解析
 void SSPReceivefuc(itr_protocol::StandSerialProtocol *SSP, itr_protocol::StandSerialFrameStruct *SSFS,U8 *Package,S32 PackageLength)
 {
+    F32 *kpx,*kdx,*kpy,*kdy;
     switch(Package[0])
     {
-        case 0x31:
+        case 0x41:
         mode=Package[1];
         break;
-        case 0x32:
-
+        case 0x42:
+        kpx=(F32*)(Package+1);
+        kdx=(F32*)(Package+5);
+        kpy=(F32*)(Package+9);
+        kdy=(F32*)(Package+13);
+        GimbalUpdatePID(*kpx,*kdx,*kpy,*kdy);
         break;
-        case 0x33:
+        case 0x44:
         config.color=Package[1];
-        config.result=Package[2];
         break;
-        case 0x34:
+        case 0x43:
         config.fps=Package[1];
         config.pixel=Package[2];
         break;
     //直接转发
         default:
+        if(uartOK)
+            uart.Send(Package,PackageLength);
         break;
     }
 }
@@ -124,7 +127,6 @@ S32 SSPSend(U8* Buffer,S32 Length)
 void Init()
 {
     config.color=0;
-    config.result=0;
     config.pixel=0;
     config.fps=30;
 
@@ -137,7 +139,7 @@ void Init()
     sspUdp.Init(0xA5 ,0x5A ,SSPSend);//串口发送函数 代替 NULL
     sspUdp.ProcessFunction[0]=&SSPReceivefuc;
 
-    //uartOK=(uart.Init("/dev/USBtty0",115200)==0);
+    uartOK=(uart.Init("/dev/USBtty0",115200)==0);
 
     GimbalInit();
 
@@ -229,6 +231,11 @@ void* camera_thread(void *name)
     tc.Tick();
     while(1)
     {
+        if (mode==0)
+        {
+            usleep(10);
+            continue;
+        }
         pic=yuvBuffer.GetBufferToWrite();
         if (pic==NULL)
         {
@@ -336,13 +343,12 @@ int main (int argc, char **argv)
     U8 tempbuff[100];
     TimeClock tc;
     tc.Tick();
-    pthread_mutex_init(&mutexTrack,NULL);
-    pthread_mutex_init(&mutexCompress,NULL);
+
     pthread_create(&tidcam, NULL, camera_thread, (void *)( "Camera" ));
     pthread_create(&tidx264, NULL, x264_thread, (void *)( "x264" ));
     pthread_create(&tidtrack, NULL, track_thread, (void *)( "Track" ));
 
-
+    int offset=0;
     for (; ; )
     {
         if(_udp.Receive(RecBuf,MaxRecLength))
@@ -355,39 +361,34 @@ int main (int argc, char **argv)
             usleep(10);
             continue;
         }
-        //获取图像，进行RGB，HSL的转换
-        //将HS转存入矩阵中
 
         //用SSP封装，包括图像和跟踪结果
         SendLength=0;
-        if(config.result==0)
+        offset=0;
+        memset(tempbuff,0,sizeof(tempbuff));
+        tempbuff[offset++]=0x40;
+        tempbuff[offset++]=mode;
+        if(mode==2)
         {
-            int offset=0;
-            memset(tempbuff,0,sizeof(tempbuff));
-            tempbuff[offset++]=0x40;
-            tempbuff[offset++]=mode;
-            if(mode==2)
+            U8* tracktemp=trackBuffer.GetBufferToRead();
+            if(tracktemp==NULL)
             {
-                U8* tracktemp=trackBuffer.GetBufferToRead();
-                if(tracktemp==NULL)
-                {
-                    usleep(10);
-                    continue;
-                }
-                MemoryCopy(tempbuff+offset,(void*)tracktemp,16);
-                trackBuffer.SetBufferToWrite(tracktemp);
+                usleep(10);
+                continue;
             }
-            offset+=16;
-            sspUdp.SSPSendPackage(0,tempbuff,offset);
-                // 发送结果
-            udpPackage.pbuffer=SendBuf;
-            udpPackage.len=SendLength;
-            _udp.Send(udpPackage);
-
-            if(uartOK)
-                uart.Send((unsigned char*)controlData,controlLength);
-            printf("Send OK at time=%d\n",tc.Tick());
+            MemoryCopy(tempbuff+offset,(void*)tracktemp,16);
+            trackBuffer.SetBufferToWrite(tracktemp);
         }
+        offset+=16;
+        sspUdp.SSPSendPackage(0,tempbuff,offset);
+            // 发送结果
+        udpPackage.pbuffer=SendBuf;
+        udpPackage.len=SendLength;
+        _udp.Send(udpPackage);
+
+        if(uartOK)
+            uart.Send((unsigned char*)controlData,controlLength);
+        printf("Send OK at time=%d\n",tc.Tick());
     }
 
     return 0;
