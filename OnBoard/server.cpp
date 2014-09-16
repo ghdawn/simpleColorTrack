@@ -70,7 +70,9 @@ F32 fps,x,y,Area;
 */
 U8 mode=2;
 
+
 ///SSP接受数据，进行命令解析
+
 void SSPReceivefuc(itr_protocol::StandSerialProtocol *SSP, itr_protocol::StandSerialFrameStruct *SSFS,U8 *Package,S32 PackageLength)
 {
     F32 *kpx,*kdx,*kpy,*kdy;
@@ -96,10 +98,12 @@ void SSPReceivefuc(itr_protocol::StandSerialProtocol *SSP, itr_protocol::StandSe
     //直接转发
         default:
         if(uartOK)
-            uart.Send(Package,PackageLength);
+            uart.Send((U8*)SSFS,SSP->GetSSFSLength(SSFS));
         break;
     }
 }
+
+
 
 //准备要发送的数据
 S32 SSPSend(U8* Buffer,S32 Length)
@@ -131,7 +135,7 @@ void Init()
     config.fps=30;
 
     udpPackage.IP="192.168.199.187";
-    // udpPackage.IP="0.0.0.0";
+    // udpPackage.IP="127.0.0.1";
     udpPackage.port=SendPort;
 
     itr_math::MathObjStandInit();

@@ -8,7 +8,6 @@ int Height[]={240,480,400};
 struct Config
 {
     int color;
-    int result;
     int fps;
     int pixel;
 };

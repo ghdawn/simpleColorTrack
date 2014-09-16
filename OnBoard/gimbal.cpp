@@ -1,5 +1,6 @@
 #include "itrbase.h"
 #include "gimbal.h"
+#include "stdio.h"
 
 itr_protocol::StandSerialProtocol sspObj;
 
@@ -28,6 +29,12 @@ S32 SSPSendfun(U8* buffer,S32 Length)
 void GimbalInit()
 {
     sspObj.Init(0xA5 ,0x5A ,SSPSendfun);
+    FILE* fp=fopen("pidpara.data","r");
+    if(fp>0)
+    {
+        fscanf(fp,"%f %f %f %f",&kpx,&kdx,&kpy,&kdy);
+        fclose(fp);
+    }
 }
 
 void GimbalControl(float x,float y,char**ControlData,int &length)
@@ -48,4 +55,15 @@ void GimbalControl(float x,float y,char**ControlData,int &length)
     sspObj.SSPSendPackage(0,Buffer,6);
     *ControlData=(char*)Buffer;
     length=len;
+}
+
+void GimbalUpdatePID(float Kpx,float Kdx,float Kpy,float Kdy)
+{
+    kpx =Kpx;
+    kdx =Kdx;
+    kpy =Kpy;
+    kdy =Kdy;
+    FILE* fp=fopen("pidpara.data","w");
+    fprintf(fp,"%f %f %f %f",kpx,kdx,kpy,kdy);
+    fclose(fp);
 }
