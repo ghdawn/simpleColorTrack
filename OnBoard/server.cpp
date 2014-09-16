@@ -134,8 +134,8 @@ void Init()
     config.pixel=0;
     config.fps=30;
 
-    udpPackage.IP="192.168.199.187";
-    // udpPackage.IP="127.0.0.1";
+    // udpPackage.IP="192.168.199.187";
+    udpPackage.IP="127.0.0.1";
     udpPackage.port=SendPort;
 
     itr_math::MathObjStandInit();
@@ -143,7 +143,7 @@ void Init()
     sspUdp.Init(0xA5 ,0x5A ,SSPSend);//串口发送函数 代替 NULL
     sspUdp.ProcessFunction[0]=&SSPReceivefuc;
 
-    uartOK=(uart.Init("/dev/USBtty0",115200)==0);
+    uartOK=(uart.Init("/dev/ttyUSB0",115200)==0);
 
     GimbalInit();
 
@@ -252,7 +252,6 @@ void* camera_thread(void *name)
         while(img_hs==NULL)
         {
             img_hs=matBuffer.GetBufferToWrite();
-            continue;
         }
 
         yuv2hsl_obj.doyuv2hsl(_width,_height,pic->data[0],pic->data[1],pic->data[2],
