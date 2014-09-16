@@ -27,9 +27,16 @@ DEPENDPATH += $$PWD/../../iTRLib/3rdparty/alglib
 
 unix:!macx: PRE_TARGETDEPS += $$PWD/../../iTRLib/3rdparty/alglib/bin/debug/libalglib.a
 
-unix:!macx: LIBS += -L$$PWD/../../iTRLib/itrbase/bin/debug/ -litrbase
+unix:!macx: LIBS += -L$$PWD/../../iTRLib/itrbase/bin/debug/ -litrbase -lavcodec -lswscale -lavutil -lx264 -lX11 -lXext
 
 INCLUDEPATH += $$PWD/../../iTRLib/itrbase
 DEPENDPATH += $$PWD/../../iTRLib/itrbase
 
 unix:!macx: PRE_TARGETDEPS += $$PWD/../../iTRLib/itrbase/bin/debug/libitrbase.a
+
+unix:!macx: LIBS += -L$$PWD/../../iTRLib/itrsystem/bin/debug/ -litrsystem
+
+INCLUDEPATH += $$PWD/../../iTRLib/itrsystem
+DEPENDPATH += $$PWD/../../iTRLib/itrsystem
+
+unix:!macx: PRE_TARGETDEPS += $$PWD/../../iTRLib/itrsystem/bin/debug/libitrsystem.a

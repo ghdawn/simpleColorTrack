@@ -6,9 +6,16 @@
 #include <QUdpSocket>
 #include <QDebug>
 #include <QPainter>
+#include "itrbase.h"
+extern "C" {
+#include <libavcodec/avcodec.h>
+#include <libswscale/swscale.h>
+}
 
 namespace Ui {
 class MainWindow;
+S32 SSPSend(U8* Buffer,S32 Length);
+void SSPReceivefuc(itr_protocol::StandSerialProtocol *SSP, itr_protocol::StandSerialFrameStruct *SSFS,U8 *Package,S32 PackageLength);
 }
 
 class MainWindow : public QMainWindow
@@ -18,34 +25,28 @@ class MainWindow : public QMainWindow
 public:
     explicit MainWindow(QWidget *parent = 0);
     ~MainWindow();
-    quint16 U8toU16(quint16 x, quint16 y);
+    itr_protocol::StandSerialProtocol sspUdp;
+
 private:
     Ui::MainWindow *ui;
     QStandardItemModel *model;
-    QUdpSocket *sender;
-    QUdpSocket *receiver;
+
     int row;
     int column;
     void draw();
-    quint16 zl;
-    quint16 x_plot;
-    quint16 y_plot;
-    quint16 d_plot;
-    double Zl;
-    double X_plot;
-    double Y_plot;
-    double D_plot;
-    quint16 jzjl;
-    quint16 jzx;
-    quint16 jzy;
-    quint16 jzd;
-    double JzJl;
-    double Jzx;
-    double Jzy;
-    double Jzd;
-    int number;
+
+    U8 tempbuff[65535];
+    U8 imgbuffer[352*240*4];
+    AVCodec *codec;
+    AVCodecContext *dec;
+    AVFrame *frame;
+    QUdpSocket *sender;
+    QUdpSocket *receiver;
+    S32 SSPSend(U8* Buffer,S32 Length);
+    void SSPReceivefuc(itr_protocol::StandSerialProtocol *SSP, itr_protocol::StandSerialFrameStruct *SSFS,U8 *Package,S32 PackageLength);
 protected:
     bool eventFilter(QObject *obj, QEvent *e);
+
 private slots:
     void processPendingDatagram();
     void on_pushButton_clicked();
