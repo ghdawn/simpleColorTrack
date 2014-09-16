@@ -19,8 +19,10 @@ std::vector<itr_vision::Block> ColorTrack::Track( Matrix &H, Matrix &S, int colo
     itr_vision::IOpnm::WritePGMFile("S1.pgm",S);
     const float dh=10;
     const float ds=20;
-    BObject.Threshold(H,color+20,color-20);
-    BObject.Threshold(S,100,70);
+    BObject.Threshold(H,color-20,color+20);
+    BObject.Threshold(S,50,100);
+    itr_vision::IOpnm::WritePGMFile("H2.pgm",H);
+    itr_vision::IOpnm::WritePGMFile("S2.pgm",S);
     int _size=H.GetCol()*H.GetRow();
     for(int i=0; i<_size; ++i)
     {
@@ -34,7 +36,6 @@ std::vector<itr_vision::Block> ColorTrack::Track( Matrix &H, Matrix &S, int colo
         }
     }
     CAObject.Contour(H,blocks);
-    itr_vision::IOpnm::WritePGMFile("H2.pgm",H);
-    itr_vision::IOpnm::WritePGMFile("S2.pgm",S);
+
     return (blocks);
 }

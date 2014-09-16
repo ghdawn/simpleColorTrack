@@ -271,7 +271,6 @@ void* track_thread(void* name)
     F32* img_hs;
     U8* tempbuff;
     U8 offset=0;
-    int x_ever=0,y_ever=0,color_counter=0;
     TimeClock tc;
     tc.Tick();
     while(1)
@@ -284,30 +283,19 @@ void* track_thread(void* name)
         if(mode==2)
         {
             // pthread_mutex_lock(&mutexTrack);
+            Matrix matH(_height,_width,img_hs),matS(_height,_width,img_hs+_width*_height);
+            std::vector<itr_vision::Block> list=tracker.Track(matH,matS,ColorTable[config.color]);
+            if(list.size()>0)
+            {
+                x=list[0].x;
+                y=list[0].y;
+                Area=list[0].Area;
+            }
+            else
+            {
+                x=y=Area=0;
+            }
 
-            x_ever=0,y_ever=0,color_counter=0;
-            unsigned int ind=0;
-            for(int i=0; i<_height; i++)
-            {
-                for(int j=0; j<_width; j++)
-                {
-                    if(img_hs[ind]>5&&img_hs[ind]<20&&img_hs[ind+_size]<100&&img_hs[ind+_size]>65)
-                    {
-                        y_ever+=i;
-                        x_ever+=j;
-                        color_counter++;
-                    }
-                    ind++;
-                }
-            }
-            if(color_counter)
-            {
-                x_ever/=color_counter;
-                y_ever/=color_counter;
-            }
-            x=x_ever;
-            y=y_ever;
-            Area=color_counter;
             fps=1000/tc.Tick();
             tempbuff=trackBuffer.GetBufferToWrite();
             if(tempbuff==NULL)
