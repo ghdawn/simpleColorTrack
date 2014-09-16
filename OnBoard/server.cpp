@@ -249,9 +249,9 @@ void* camera_thread(void *name)
         capture_get_picture(capture, pic);
 
         img_hs=matBuffer.GetBufferToWrite();
-        if(img_hs==NULL)
+        while(img_hs==NULL)
         {
-            yuvBuffer.SetBufferToWrite(pic);
+            img_hs=matBuffer.GetBufferToWrite();
             continue;
         }
 
