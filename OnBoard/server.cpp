@@ -251,7 +251,8 @@ void* camera_thread(void *name)
         img_hs=matBuffer.GetBufferToWrite();
         if(img_hs==NULL)
         {
-           continue;
+            yuvBuffer.SetBufferToWrite(pic);
+            continue;
         }
 
         yuv2hsl_obj.doyuv2hsl(_width,_height,pic->data[0],pic->data[1],pic->data[2],
@@ -283,7 +284,7 @@ void* track_thread(void* name)
         if(mode==2)
         {
             // pthread_mutex_lock(&mutexTrack);
-            Matrix matH(_height,_width,img_hs),matS(_height,_width,img_hs+_width*_height);
+            Matrix matH(_height,_width,img_hs),matS(_height,_width,img_hs+_size);
             std::vector<itr_vision::Block> list=tracker.Track(matH,matS,ColorTable[config.color]);
             if(list.size()>0)
             {
