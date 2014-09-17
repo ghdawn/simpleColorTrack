@@ -68,7 +68,7 @@ F32 fps,x,y,Area;
 * 1  摄像头工作，跟踪不工作
 * 2  跟踪工作
 */
-U8 mode=2;
+U8 mode=0;
 
 
 ///SSP接受数据，进行命令解析
@@ -219,7 +219,7 @@ void* x264_thread(void* name)
 
 void* camera_thread(void *name)
 {
-    void *capture = capture_open("/dev/video0", _width, _height, PIX_FMT_YUV420P);
+    void *capture = capture_open("/dev/video1", _width, _height, PIX_FMT_YUV420P);
 
     if (!capture)
     {
@@ -378,7 +378,7 @@ int main (int argc, char **argv)
         udpPackage.len=SendLength;
         _udp.Send(udpPackage);
 
-        if(uartOK)
+        if(mode==2 && uartOK)
             uart.Send((unsigned char*)controlData,controlLength);
         printf("Send OK at time=%d\n",tc.Tick());
     }

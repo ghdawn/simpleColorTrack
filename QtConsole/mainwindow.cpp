@@ -67,6 +67,7 @@ MainWindow::MainWindow(QWidget *parent) :
     model->setHeaderData(2,Qt::Horizontal,tr("x"));
     model->setHeaderData(3,Qt::Horizontal,tr("y"));
     model->setHeaderData(4,Qt::Horizontal,tr("area"));
+    Ui::Init();
     sspUdp.Init(0xA5,0x5A,Ui::SSPSend);
     sspUdp.ProcessFunction[0]=&Ui::SSPReceivefuc;
     sender=new QUdpSocket(this);
@@ -118,7 +119,7 @@ void MainWindow::processPendingDatagram()
             k++;
         }
         ui->radarWidget->update();
-        QString str=QString("x:%1,y:%2,fps%3\n").arg(Ui::x).arg(Ui::y).arg(Ui::fps);
+        QString str=QString("x:%1,y:%2\nfps:%3\n").arg(Ui::x).arg(Ui::y).arg(Ui::fps);
         ui->label_2->setText(str);
     }
 }
@@ -154,37 +155,39 @@ void MainWindow::on_pushButton_clicked()
 
 void MainWindow::on_pushButton_2_clicked()
 {
-    U8 buffer[2]={0x41,0};
+    U8 buffer[2]={0x41,1};
     sspUdp.SSPSendPackage(0,buffer,2);
 }
 
 void MainWindow::on_pushButton_3_clicked()
 {
-    U8 buffer[2]={0x41,0};
+    U8 buffer[2]={0x41,2};
     sspUdp.SSPSendPackage(0,buffer,2);
 }
 
 void MainWindow::on_pushButton_4_clicked()
 {
-    //    QByteArray buffer;
-    //    buffer.append(0x01);
-    //    JzJl=ui->doubleSpinBox->value();
-    //    jzjl=JzJl*100;
-    //    buffer.append(jzjl);
-    //    buffer.append(jzjl>>8);
-    //    Jzx=ui->doubleSpinBox_2->value();
-    //    jzx=Jzx*100;
-    //    buffer.append(jzx);
-    //    buffer.append(jzx>>8);
-    //    Jzy=ui->doubleSpinBox_3->value();
-    //    jzy=Jzy*100;
-    //    buffer.append(jzy);
-    //    buffer.append(jzy>>8);
-    //    Jzd=ui->doubleSpinBox_4->value();
-    //    jzd=Jzd*100;
-    //    buffer.append(jzd);
-    //    buffer.append(jzd>>8);
-    //    sender->writeDatagram(buffer.data(),buffer.size(),QHostAddress::Broadcast,45454);
-    //    buffer.clear();
+    U8 buffer[9]={0x42};
+    int pos=1;
+    F32 data=ui->doubleSpinBox->value();
+    U8* pData=(U8*)&data;
+    for(int i=0;i<4;i++)
+        buffer[pos++]=pData[i];
+    data=ui->doubleSpinBox_2->value();
+    for(int i=0;i<4;i++)
+        buffer[pos++]=pData[i];
+    data=ui->doubleSpinBox_3->value();
+    for(int i=0;i<4;i++)
+        buffer[pos++]=pData[i];
+    data=ui->doubleSpinBox_4->value();
+    for(int i=0;i<4;i++)
+        buffer[pos++]=pData[i];
+    sspUdp.SSPSendPackage(0,buffer,pos);
 }
 
+
+void MainWindow::on_pushButton_5_clicked()
+{
+    U8 buffer[1]={0x45};
+    sspUdp.SSPSendPackage(0,buffer,1);
+}

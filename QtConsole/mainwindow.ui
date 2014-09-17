@@ -142,8 +142,8 @@
    <widget class="QWidget" name="layoutWidget">
     <property name="geometry">
      <rect>
-      <x>340</x>
-      <y>400</y>
+      <x>350</x>
+      <y>390</y>
       <width>109</width>
       <height>136</height>
      </rect>
@@ -154,7 +154,7 @@
        <item>
         <widget class="QLabel" name="label_3">
          <property name="text">
-          <string>帧率</string>
+          <string>Px</string>
          </property>
         </widget>
        </item>
@@ -168,7 +168,7 @@
        <item>
         <widget class="QLabel" name="label_4">
          <property name="text">
-          <string>x</string>
+          <string>Dx</string>
          </property>
         </widget>
        </item>
@@ -182,7 +182,7 @@
        <item>
         <widget class="QLabel" name="label_5">
          <property name="text">
-          <string>y</string>
+          <string>Py</string>
          </property>
         </widget>
        </item>
@@ -196,7 +196,7 @@
        <item>
         <widget class="QLabel" name="label_6">
          <property name="text">
-          <string>area</string>
+          <string>Dy</string>
          </property>
         </widget>
        </item>
