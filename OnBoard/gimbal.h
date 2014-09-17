@@ -3,5 +3,6 @@
 
 void GimbalInit();
 void GimbalControl(float x,float y,char**ControlData,int &length);
+void GimbalStop(char**ControlData,int &length);
 void GimbalUpdatePID(float kpx,float kdx,float kpy,float kdy);
 #endif

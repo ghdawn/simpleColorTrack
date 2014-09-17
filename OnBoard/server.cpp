@@ -80,6 +80,12 @@ void SSPReceivefuc(itr_protocol::StandSerialProtocol *SSP, itr_protocol::StandSe
     {
         case 0x41:
         mode=Package[1];
+        if(mode!=2)
+        {
+            GimbalStop(&controlData,controlLength);
+            if(uartOK)
+                uart.Send((unsigned char*)controlData,controlLength);
+        }
         break;
         case 0x42:
         MemoryCopy(Package,Package+1,16);
@@ -313,12 +319,15 @@ void* track_thread(void* name)
                 offset+=4;
                 trackBuffer.SetBufferToRead(tempbuff);
                 GimbalControl( x, y,&controlData,controlLength);
-                if(mode==2 && uartOK)
+                if(uartOK)
                     uart.Send((unsigned char*)controlData,controlLength);
             }
             else
             {
                 x=y=Area=0;
+                GimbalStop(&controlData,controlLength);
+                if(uartOK)
+                    uart.Send((unsigned char*)controlData,controlLength);
             }
             printf("Track OK, at time=%f\n", 1000/fps);
         }

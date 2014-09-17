@@ -36,6 +36,14 @@ void GimbalInit()
         fclose(fp);
     }
 }
+void GimbalStop(char**ControlData,int &length)
+{
+    ASU8(&Buffer[0]) = 0x30;
+    ASU8(&Buffer[1]) = 0;
+    sspObj.SSPSendPackage(0,Buffer,2);
+    *ControlData=(char*)Buffer;
+    length=len;
+}
 
 void GimbalControl(float x,float y,char**ControlData,int &length)
 {
