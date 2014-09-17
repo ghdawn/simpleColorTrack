@@ -95,6 +95,8 @@ void SSPReceivefuc(itr_protocol::StandSerialProtocol *SSP, itr_protocol::StandSe
         config.fps=Package[1];
         config.pixel=Package[2];
         break;
+        case 0x45:
+
     //直接转发
         default:
         if(uartOK)
@@ -195,7 +197,7 @@ void* x264_thread(void* name)
             usleep(10);
             _imgcomp=compressBuffer.GetBufferToWrite();    
         }
-
+        tc.Tick();
         int rc = vc_compress(encoder, pic->data, pic->stride,&imgCompressData , & imgLength);  //前两位是压缩后长度
 
         yuvBuffer.SetBufferToWrite(pic);
@@ -210,7 +212,6 @@ void* x264_thread(void* name)
 
         compressBuffer.SetBufferToRead(_imgcomp);
 
-        // pthread_mutex_unlock(&mutexCompress);
         printf("Compress OK at time=%d\n",tc.Tick());
     }
 
@@ -219,7 +220,7 @@ void* x264_thread(void* name)
 
 void* camera_thread(void *name)
 {
-    void *capture = capture_open("/dev/video1", _width, _height, PIX_FMT_YUV420P);
+    void *capture = capture_open("/dev/video0", _width, _height, PIX_FMT_YUV420P);
 
     if (!capture)
     {
@@ -240,6 +241,7 @@ void* camera_thread(void *name)
             usleep(10);
             continue;
         }
+        tc.Tick();
         pic=yuvBuffer.GetBufferToWrite();
         if (pic==NULL)
         {
@@ -247,7 +249,7 @@ void* camera_thread(void *name)
             continue;
         }
         capture_get_picture(capture, pic);
-
+printf("New Img OK at time=%d\n",tc.Tick());
         img_hs=matBuffer.GetBufferToWrite();
         while(img_hs==NULL)
         {
@@ -259,7 +261,7 @@ void* camera_thread(void *name)
 
         yuvBuffer.SetBufferToRead(pic);
         matBuffer.SetBufferToRead(img_hs);
-        printf("New Img OK at time=%d\n",tc.Tick());
+        printf("New Img YUV to HSL =%d\n",tc.Tick());
     }
 
     capture_close(capture);
@@ -282,43 +284,39 @@ void* track_thread(void* name)
         }
         if(mode==2)
         {
-            // pthread_mutex_lock(&mutexTrack);
+            tc.Tick();
             Matrix matH(_height,_width,img_hs),matS(_height,_width,img_hs+_size);
             std::vector<itr_vision::Block> list=tracker.Track(matH,matS,ColorTable[config.color]);
+            fps=1000/tc.Tick();
             if(list.size()>0)
             {
                 x=list[0].x;
                 y=list[0].y;
                 Area=list[0].Area;
+                tempbuff=trackBuffer.GetBufferToWrite();
+                if(tempbuff==NULL)
+                {
+                    continue;
+                }
+                offset=0;
+                memcpy(tempbuff+offset,(void*)&fps,4);
+                offset+=4;
+                memcpy(tempbuff+offset,(void*)&x,4);
+                offset+=4;
+                memcpy(tempbuff+offset,(void*)&y,4);
+                offset+=4;
+                memcpy(tempbuff+offset,(void*)&Area,4);
+                offset+=4;
+                trackBuffer.SetBufferToRead(tempbuff);
+                GimbalControl( x, y,&controlData,controlLength);
+                if(mode==2 && uartOK)
+                    uart.Send((unsigned char*)controlData,controlLength);
             }
             else
             {
                 x=y=Area=0;
             }
-
-            fps=1000/tc.Tick();
-            tempbuff=trackBuffer.GetBufferToWrite();
-            if(tempbuff==NULL)
-            {
-                continue;
-            }
-            offset=0;
-            memcpy(tempbuff+offset,(void*)&fps,4);
-            offset+=4;
-            memcpy(tempbuff+offset,(void*)&x,4);
-            offset+=4;
-            memcpy(tempbuff+offset,(void*)&y,4);
-            offset+=4;
-            memcpy(tempbuff+offset,(void*)&Area,4);
-            offset+=4;
-            trackBuffer.SetBufferToRead(tempbuff);
-
-            GimbalControl( x, y,&controlData,controlLength);
-
-printf("Track OK, at fps=%f\n", fps);
-            // newResult=true;
-            // pthread_mutex_unlock(&mutexTrack);
-
+            printf("Track OK, at fps=%f\n", fps);
         }
         matBuffer.SetBufferToWrite(img_hs);
     }
@@ -378,8 +376,6 @@ int main (int argc, char **argv)
         udpPackage.len=SendLength;
         _udp.Send(udpPackage);
 
-        if(mode==2 && uartOK)
-            uart.Send((unsigned char*)controlData,controlLength);
         printf("Send OK at time=%d\n",tc.Tick());
     }
 

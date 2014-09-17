@@ -53,26 +53,28 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->setupUi(this);
     ui->radarWidget->installEventFilter(this);
     setWindowTitle(tr("无人机视觉测试"));
-    ui->doubleSpinBox->setRange(0.0,1000.0);
-    ui->doubleSpinBox_2->setRange(0.0,1000.0);
-    ui->doubleSpinBox_3->setRange(0.0,1000.0);
-    ui->doubleSpinBox_4->setRange(0.0,1000.0);
-    row=10;
-    column=5;
-    model=new QStandardItemModel(row,column);
-    ui->tableView->setModel(model);
-    ui->tableView->verticalHeader()->hide();
-    model->setHeaderData(0,Qt::Horizontal,tr("目标"));
-    model->setHeaderData(1,Qt::Horizontal,tr("帧率"));
-    model->setHeaderData(2,Qt::Horizontal,tr("x"));
-    model->setHeaderData(3,Qt::Horizontal,tr("y"));
-    model->setHeaderData(4,Qt::Horizontal,tr("area"));
+    ui->doubleSpinBox->setRange(0.0,10.0);
+    ui->doubleSpinBox_2->setRange(0.0,10.0);
+    ui->doubleSpinBox_3->setRange(0.0,10.0);
+    ui->doubleSpinBox_4->setRange(0.0,10.0);
+    FILE* fin=fopen("para.data","r");
+    if(fin>0)
+    {
+        F32 px,dx,py,dy;
+        fscanf(fin,"%f %f %f %f",&px,&dx,&py,&dy);
+        fclose(fin);
+        ui->doubleSpinBox->setValue(px);
+        ui->doubleSpinBox_2->setValue(dx);
+        ui->doubleSpinBox_3->setValue(py);
+        ui->doubleSpinBox_4->setValue(dy);
+    }
+
+
     Ui::Init();
     sspUdp.Init(0xA5,0x5A,Ui::SSPSend);
     sspUdp.ProcessFunction[0]=&Ui::SSPReceivefuc;
     sender=new QUdpSocket(this);
     receiver=new QUdpSocket(this);
-    //    receiver->bind(RecPort,QUdpSocket::ShareAddress);
     receiver->bind(RecPort);
     connect(receiver,SIGNAL(readyRead()),this,SLOT(processPendingDatagram()));
     avcodec_register_all();
@@ -183,6 +185,10 @@ void MainWindow::on_pushButton_4_clicked()
     for(int i=0;i<4;i++)
         buffer[pos++]=pData[i];
     sspUdp.SSPSendPackage(0,buffer,pos);
+    FILE* fout=fopen("para.data","w");
+    fprintf(fout,"%f %f %f %f",ui->doubleSpinBox->value(),
+            ui->doubleSpinBox_2->value(),ui->doubleSpinBox_3->value(),ui->doubleSpinBox_4->value());
+    fclose(fout);
 }
 
 
