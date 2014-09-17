@@ -137,7 +137,7 @@ void Init()
     config.fps=30;
 
     // udpPackage.IP="192.168.199.187";
-    udpPackage.IP="127.0.0.1";
+    udpPackage.IP="192.168.199.141";
     udpPackage.port=SendPort;
 
     itr_math::MathObjStandInit();
