@@ -296,9 +296,10 @@ void* track_thread(void* name)
                 y=list[0].y;
                 Area=list[0].Area;
                 tempbuff=trackBuffer.GetBufferToWrite();
-                if(tempbuff==NULL)
+                while(tempbuff==NULL)
                 {
-                    continue;
+                    usleep(10);
+                    tempbuff=trackBuffer.GetBufferToWrite();
                 }
                 offset=0;
                 memcpy(tempbuff+offset,(void*)&fps,4);
@@ -319,6 +320,10 @@ void* track_thread(void* name)
                 x=y=Area=0;
             }
             printf("Track OK, at time=%f\n", 1000/fps);
+        }
+        else
+        {
+            matBuffer.SetBufferToWrite(img_hs);
         }
     }
 
@@ -362,13 +367,12 @@ int main (int argc, char **argv)
         if(mode==2)
         {
             U8* tracktemp=trackBuffer.GetBufferToRead();
-            if(tracktemp==NULL)
+            
+            if(tracktemp!=NULL)
             {
-                usleep(10);
-                continue;
+                MemoryCopy(tempbuff+offset,(void*)tracktemp,16);
+                trackBuffer.SetBufferToWrite(tracktemp);
             }
-            MemoryCopy(tempbuff+offset,(void*)tracktemp,16);
-            trackBuffer.SetBufferToWrite(tracktemp);
         }
         offset+=16;
         sspUdp.SSPSendPackage(0,tempbuff,offset);
