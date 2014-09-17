@@ -253,6 +253,7 @@ printf("New Img OK at time=%d\n",tc.Tick());
         img_hs=matBuffer.GetBufferToWrite();
         while(img_hs==NULL)
         {
+	    usleep(10);
             img_hs=matBuffer.GetBufferToWrite();
         }
 
@@ -287,6 +288,7 @@ void* track_thread(void* name)
             tc.Tick();
             Matrix matH(_height,_width,img_hs),matS(_height,_width,img_hs+_size);
             std::vector<itr_vision::Block> list=tracker.Track(matH,matS,ColorTable[config.color]);
+            matBuffer.SetBufferToWrite(img_hs);
             fps=1000/tc.Tick();
             if(list.size()>0)
             {
@@ -316,9 +318,8 @@ void* track_thread(void* name)
             {
                 x=y=Area=0;
             }
-            printf("Track OK, at fps=%f\n", fps);
+            printf("Track OK, at time=%f\n", 1000/fps);
         }
-        matBuffer.SetBufferToWrite(img_hs);
     }
 
 }
