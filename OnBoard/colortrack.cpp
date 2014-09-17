@@ -12,16 +12,8 @@ ColorTrack::ColorTrack()
 std::vector<itr_vision::Block> ColorTrack::Track( Matrix &H, Matrix &S, int color)
 {
 
-    itr_vision::ConnectedAnalysis CAObject;
-    std::vector<itr_vision::Block> blocks;
-    // itr_vision::IOpnm::WritePGMFile("H1.pgm",H);
-    // itr_vision::IOpnm::WritePGMFile("S1.pgm",S);
-    const float dh=10;
-    const float ds=20;
     itr_vision::Binarization::Threshold(H,color-20,color+20);
     itr_vision::Binarization::Threshold(S,50,100);
-    // itr_vision::IOpnm::WritePGMFile("H2.pgm",H);
-    // itr_vision::IOpnm::WritePGMFile("S2.pgm",S);
     int _size=H.GetCol()*H.GetRow();
     for(int i=0; i<_size; ++i)
     {
@@ -34,6 +26,8 @@ std::vector<itr_vision::Block> ColorTrack::Track( Matrix &H, Matrix &S, int colo
             H[i]=255;
         }
     }
+    itr_vision::ConnectedAnalysis CAObject;
+    std::vector<itr_vision::Block> blocks;
     CAObject.Contour(H,blocks);
 
     return (blocks);
