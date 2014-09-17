@@ -82,10 +82,11 @@ void SSPReceivefuc(itr_protocol::StandSerialProtocol *SSP, itr_protocol::StandSe
         mode=Package[1];
         break;
         case 0x42:
-        kpx=(F32*)(Package+1);
-        kdx=(F32*)(Package+5);
-        kpy=(F32*)(Package+9);
-        kdy=(F32*)(Package+13);
+        MemoryCopy(Package,Package+1,16);
+        kpx=(F32*)(Package);
+        kdx=(F32*)(Package+4);
+        kpy=(F32*)(Package+8);
+        kdy=(F32*)(Package+12);
         GimbalUpdatePID(*kpx,*kdx,*kpy,*kdy);
         break;
         case 0x44:
