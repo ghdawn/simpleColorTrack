@@ -57,27 +57,17 @@
      </widget>
     </widget>
    </widget>
-   <widget class="QTextBrowser" name="textBrowser">
-    <property name="geometry">
-     <rect>
-      <x>10</x>
-      <y>390</y>
-      <width>171</width>
-      <height>131</height>
-     </rect>
-    </property>
-   </widget>
    <widget class="QLabel" name="label">
     <property name="geometry">
      <rect>
       <x>10</x>
       <y>370</y>
-      <width>54</width>
-      <height>12</height>
+      <width>71</width>
+      <height>41</height>
      </rect>
     </property>
     <property name="text">
-     <string>信号测试</string>
+     <string>IP：</string>
     </property>
    </widget>
    <widget class="QLabel" name="label_2">
@@ -210,14 +200,27 @@
    <widget class="QPushButton" name="pushButton_5">
     <property name="geometry">
      <rect>
-      <x>250</x>
-      <y>460</y>
+      <x>40</x>
+      <y>370</y>
       <width>75</width>
       <height>23</height>
      </rect>
     </property>
     <property name="text">
-     <string>查询参数</string>
+     <string>确定</string>
+    </property>
+   </widget>
+   <widget class="QLineEdit" name="lineEdit">
+    <property name="geometry">
+     <rect>
+      <x>22</x>
+      <y>400</y>
+      <width>141</width>
+      <height>27</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>192.168.199.251</string>
     </property>
    </widget>
   </widget>

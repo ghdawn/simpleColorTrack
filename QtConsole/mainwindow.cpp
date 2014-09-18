@@ -14,7 +14,7 @@ itr_system::Udp::UdpPackage udppackage;
 float x=0,y=0,Area=0,fps=0;
 void Init()
 {
-    udppackage.IP="127.0.0.1";
+    udppackage.IP="192.168.199.251";
     udppackage.port=ServerPort;
 }
 
@@ -103,12 +103,14 @@ void MainWindow::processPendingDatagram()
         int Length=receiver->pendingDatagramSize();
         Length=receiver->readDatagram((char*)tempbuff,receiver->pendingDatagramSize());
         sspUdp.ProcessRawByte(tempbuff,SSPLength);
+        QString str=QString("x:%1,y:%2\nfps:%3\n").arg(Ui::x).arg(Ui::y).arg(Ui::fps);
+        ui->label_2->setText(str);
         int got;
         AVPacket pkt;
         pkt.data = tempbuff+SSPLength;
         pkt.size = Length-SSPLength;
         int ret = avcodec_decode_video2(dec, frame, &got, &pkt);
-        if(ret<0)
+        if(got<=0)
             continue;
         int k=0;
         for(int j=0;j<240;j++)
@@ -121,8 +123,7 @@ void MainWindow::processPendingDatagram()
             k++;
         }
         ui->radarWidget->update();
-        QString str=QString("x:%1,y:%2\nfps:%3\n").arg(Ui::x).arg(Ui::y).arg(Ui::fps);
-        ui->label_2->setText(str);
+
     }
 }
 
@@ -194,6 +195,5 @@ void MainWindow::on_pushButton_4_clicked()
 
 void MainWindow::on_pushButton_5_clicked()
 {
-    U8 buffer[1]={0x45};
-    sspUdp.SSPSendPackage(0,buffer,1);
+    Ui::udppackage.IP=ui->lineEdit->text().toStdString();
 }
