@@ -14,6 +14,7 @@ extern "C" {
 #include "itrdevice.h"
 #include "basestruct.h"
 #include "colortrack.h"
+#include "lktracking.h"
 #include "yuv2hsl.h"
 #include "gimbal.h"
 
@@ -54,7 +55,8 @@ bool uartOK=false;
 
 itr_protocol::StandSerialProtocol sspUdp;
 
-ColorTrack tracker;
+
+itr_math::RectangleF targetPos;
 Config config;
 
 unsigned int _width,_height;
@@ -75,7 +77,7 @@ U8 mode=0;
 
 void SSPReceivefuc(itr_protocol::StandSerialProtocol *SSP, itr_protocol::StandSerialFrameStruct *SSFS,U8 *Package,S32 PackageLength)
 {
-    F32 *kpx,*kdx,*kpy,*kdy;
+    F32 *a,*b,*c,*d;
     switch(Package[0])
     {
         case 0x41:
@@ -89,11 +91,11 @@ void SSPReceivefuc(itr_protocol::StandSerialProtocol *SSP, itr_protocol::StandSe
         break;
         case 0x42:
         MemoryCopy(Package,Package+1,16);
-        kpx=(F32*)(Package);
-        kdx=(F32*)(Package+4);
-        kpy=(F32*)(Package+8);
-        kdy=(F32*)(Package+12);
-        GimbalUpdatePID(*kpx,*kdx,*kpy,*kdy);
+        a=(F32*)(Package);
+        b=(F32*)(Package+4);
+        c=(F32*)(Package+8);
+        d=(F32*)(Package+12);
+        GimbalUpdatePID(*a,*b,*c,*d);
         break;
         case 0x44:
         config.color=Package[1];
@@ -103,7 +105,12 @@ void SSPReceivefuc(itr_protocol::StandSerialProtocol *SSP, itr_protocol::StandSe
         config.pixel=Package[2];
         break;
         case 0x45:
-
+        MemoryCopy(Package,Package+1,8);
+        a=(F32*)(Package);
+        b=(F32*)(Package+4);
+        targetPos.Width=*a;
+        targetPos.Height=*b;
+        break;
     //直接转发
         default:
         if(uartOK)
@@ -117,11 +124,6 @@ void SSPReceivefuc(itr_protocol::StandSerialProtocol *SSP, itr_protocol::StandSe
 //准备要发送的数据
 S32 SSPSend(U8* Buffer,S32 Length)
 {
-    for (int i = 0; i < Length; ++i)
-    {
-        printf("%X ",Buffer[i]);
-    }
-    printf("\n");
     memcpy(SendBuf,Buffer,Length);
 
     U8* img=compressBuffer.GetBufferToRead();
@@ -143,7 +145,7 @@ void Init()
     config.pixel=0;
     config.fps=30;
 
-    // udpPackage.IP="192.168.199.187";
+    // udpPackage.IP="255.255.255.255";
     udpPackage.IP="192.168.199.141";
     udpPackage.port=SendPort;
 
@@ -160,6 +162,8 @@ void Init()
     _height=Height[config.pixel];
     _size=_width*_height;
 
+    targetPos.Width=40;
+    targetPos.Height=40;
     yuvBuffer.Init(2);
     yuvBuffer.AddBufferToList(new Picture);
     yuvBuffer.AddBufferToList(new Picture);
@@ -238,7 +242,7 @@ void* camera_thread(void *name)
     Picture *pic;
     ///用于yuv到hls转换
     yuv2hsl yuv2hsl_obj;
-    F32* img_hs;
+    F32* img_g;
     TimeClock tc;
     tc.Tick();
     while(1)
@@ -257,18 +261,21 @@ void* camera_thread(void *name)
         }
         capture_get_picture(capture, pic);
 printf("New Img OK at time=%d\n",tc.Tick());
-        img_hs=matBuffer.GetBufferToWrite();
-        while(img_hs==NULL)
+        img_g=matBuffer.GetBufferToWrite();
+        while(img_g==NULL)
         {
 	    usleep(10);
-            img_hs=matBuffer.GetBufferToWrite();
+            img_g=matBuffer.GetBufferToWrite();
         }
 
-        yuv2hsl_obj.doyuv2hsl(_width,_height,pic->data[0],pic->data[1],pic->data[2],
-          img_hs,img_hs+_size);
-
+        // yuv2hsl_obj.doyuv2hsl(_width,_height,pic->data[0],pic->data[1],pic->data[2],
+        //   img_hs,img_hs+_size);
+        for (int i = 0; i < _size; ++i)
+        {
+            img_g[i]=pic->data[0][i];
+        }
         yuvBuffer.SetBufferToRead(pic);
-        matBuffer.SetBufferToRead(img_hs);
+        matBuffer.SetBufferToRead(img_g);
         printf("New Img YUV to HSL =%d\n",tc.Tick());
     }
 
@@ -278,63 +285,49 @@ printf("New Img OK at time=%d\n",tc.Tick());
 void* track_thread(void* name)
 {
 
-    F32* img_hs;
+    F32* img_g;
     U8* tempbuff;
+    lktracking* tracker=NULL;
     U8 offset=0;
+    bool inited=false;
     TimeClock tc;
     tc.Tick();
     while(1)
     {
-        img_hs=matBuffer.GetBufferToRead();
-        if (img_hs==NULL)
+        img_g=matBuffer.GetBufferToRead();
+        if (img_g==NULL)
         {
             continue;
         }
         if(mode==2)
         {
             tc.Tick();
-            Matrix matH(_height,_width,img_hs),matS(_height,_width,img_hs+_size);
-            std::vector<itr_vision::Block> list=tracker.Track(matH,matS,ColorTable[config.color]);
-            matBuffer.SetBufferToWrite(img_hs);
-            fps=1000/tc.Tick();
-            if(list.size()>0)
+            Matrix img(_height,_width,img_g);
+            if(!inited)
             {
-                x=list[0].x;
-                y=list[0].y;
-                Area=list[0].Area;
-                tempbuff=trackBuffer.GetBufferToWrite();
-                while(tempbuff==NULL)
-                {
-                    usleep(10);
-                    tempbuff=trackBuffer.GetBufferToWrite();
-                }
-                offset=0;
-                memcpy(tempbuff+offset,(void*)&fps,4);
-                offset+=4;
-                memcpy(tempbuff+offset,(void*)&x,4);
-                offset+=4;
-                memcpy(tempbuff+offset,(void*)&y,4);
-                offset+=4;
-                memcpy(tempbuff+offset,(void*)&Area,4);
-                offset+=4;
-                trackBuffer.SetBufferToRead(tempbuff);
-                GimbalControl( x, y,&controlData,controlLength);
-                if(uartOK)
-                    uart.Send((unsigned char*)controlData,controlLength);
+                tracker=new lktracking;
+                targetPos.X=(_width-targetPos.Width)*0.5;
+                targetPos.Y=(_height-targetPos.Height)*0.5;
+                tracker->Init(img,targetPos);
+                inited=true;
             }
             else
             {
-                x=y=Area=0;
-                GimbalStop(&controlData,controlLength);
-                if(uartOK)
-                    uart.Send((unsigned char*)controlData,controlLength);
             }
+
+            
+            
             printf("Track OK, at time=%f\n", 1000/fps);
         }
         else
         {
-            matBuffer.SetBufferToWrite(img_hs);
+            if(tracker!=NULL)
+            {
+                delete tracker;
+                tracker=NULL;
+            }
         }
+        matBuffer.SetBufferToWrite(img_g);
     }
 
 }

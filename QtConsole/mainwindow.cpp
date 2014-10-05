@@ -137,7 +137,7 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *e)
             QPainter painter(ui->radarWidget);
             painter.drawImage(QPoint(0,0),img);
             painter.setPen(Qt::red);
-            painter.drawEllipse(QPoint(Ui::x,Ui::y),sqrt(Ui::Area)/2,sqrt(Ui::Area)/2);
+            painter.drawRect(Ui::x,Ui::y,40,40);
             return true;
         }
     }
