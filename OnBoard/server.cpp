@@ -309,6 +309,7 @@ void* track_thread(void* name)
             tempbuff=trackBuffer.GetBufferToWrite();
             if(tempbuff==NULL)
             {
+                //matBuffer.SetBufferToRead(img_g);
                 continue;
             }
             tc.Tick();
