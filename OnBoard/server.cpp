@@ -146,7 +146,7 @@ void Init()
     config.fps=30;
 
     // udpPackage.IP="255.255.255.255";
-    udpPackage.IP="192.168.199.141";
+    udpPackage.IP="192.168.199.159";
     udpPackage.port=SendPort;
 
     itr_math::MathObjStandInit();
@@ -180,6 +180,7 @@ void Init()
 
 void* x264_thread(void* name)
 {
+    printf("x264 start !\n");
     void *encoder = vc_open(_width, _height, config.fps);
     if (!encoder)
     {
@@ -231,8 +232,9 @@ void* x264_thread(void* name)
 
 void* camera_thread(void *name)
 {
+    printf("camera start !\n");
     void *capture = capture_open("/dev/video0", _width, _height, PIX_FMT_YUV420P);
-
+    printf("camera opened !\n");
     if (!capture)
     {
         fprintf(stderr, "ERR: can't open '/dev/video0'\n");
@@ -287,6 +289,7 @@ void* track_thread(void* name)
 
     F32* img_g;
     U8* tempbuff;
+    F32 _vx=0,_vy=0;
     lktracking* tracker=NULL;
     U8 offset=0;
     bool inited=false;
@@ -294,13 +297,21 @@ void* track_thread(void* name)
     tc.Tick();
     while(1)
     {
+        printf("track start !\n");
         img_g=matBuffer.GetBufferToRead();
         if (img_g==NULL)
         {
             continue;
         }
+        printf("mode int track\n",mode);
         if(mode==2)
         {
+            tempbuff=trackBuffer.GetBufferToWrite();
+            if(tempbuff==NULL)
+            {
+                //matBuffer.SetBufferToRead(img_g);
+                continue;
+            }
             tc.Tick();
             Matrix img(_height,_width,img_g);
             if(!inited)
@@ -313,10 +324,23 @@ void* track_thread(void* name)
             }
             else
             {
+                if(tracker->Go(img,targetPos,_vx,_vy))  // Pos information are in the targetPos, _vx and _vy are speeds.
+                {   //fps,x,y,Area
+                    offset=0;
+                    fps=1000/tc.Tick();
+                    memcpy(tempbuff,&fps,4);
+                    x=targetPos.X+targetPos.Width*0.5;
+                    memcpy(tempbuff,&x,4);
+                    y=targetPos.Y+targetPos.Height*0.5;
+                    memcpy(tempbuff,&y,4);
+                    Area=targetPos.Width*targetPos.Height;
+                    memcpy(tempbuff,&Area,4);
+                }
+                else
+                {
+                    continue;   //TODO: to be reconsidered.
+                }
             }
-
-            
-            
             printf("Track OK, at time=%f\n", 1000/fps);
         }
         else
@@ -328,6 +352,7 @@ void* track_thread(void* name)
             }
         }
         matBuffer.SetBufferToWrite(img_g);
+        trackBuffer.SetBufferToRead(tempbuff);
     }
 
 }
@@ -335,7 +360,7 @@ void* track_thread(void* name)
 int main (int argc, char **argv)
 {
     Init();
-
+   
     //新建图像采集线程，图像压缩线程
     pthread_t tidx264,tidcam,tidtrack;
 
@@ -349,7 +374,8 @@ int main (int argc, char **argv)
 
     int offset=0;
     for (; ; )
-    {
+    { 
+        printf("main start !\n" );
         if(_udp.Receive(RecBuf,MaxRecLength))
         {
             //使用SSP进行解包
