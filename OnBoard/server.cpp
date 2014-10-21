@@ -145,7 +145,6 @@ void Init()
     config.pixel=0;
     config.fps=30;
 
-    // udpPackage.IP="255.255.255.255";
     udpPackage.IP="192.168.199.159";
     udpPackage.port=SendPort;
 
@@ -203,11 +202,11 @@ void* x264_thread(void* name)
         }
         // pthread_mutex_lock(&mutexCompress);
 
-        
+
         while (_imgcomp==NULL)
         {
             usleep(10);
-            _imgcomp=compressBuffer.GetBufferToWrite();    
+            _imgcomp=compressBuffer.GetBufferToWrite();
         }
         tc.Tick();
         int rc = vc_compress(encoder, pic->data, pic->stride,&imgCompressData , & imgLength);  //前两位是压缩后长度
@@ -396,7 +395,7 @@ int main (int argc, char **argv)
         if(mode==2)
         {
             U8* tracktemp=trackBuffer.GetBufferToRead();
-            
+
             if(tracktemp!=NULL)
             {
                 MemoryCopy(tempbuff+offset,(void*)tracktemp,16);
