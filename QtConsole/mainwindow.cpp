@@ -12,6 +12,7 @@ namespace Ui
 itr_system::Udp udp;
 itr_system::Udp::UdpPackage udppackage;
 float x=0,y=0,Area=0,fps=0;
+int mode;
 void Init()
 {
     udppackage.IP="192.168.199.251";
@@ -32,7 +33,7 @@ void SSPReceivefuc(itr_protocol::StandSerialProtocol *SSP, itr_protocol::StandSe
         switch(Package[0])
             {
                 case 0x40:
-                //mode=Package[1];
+                mode=Package[1];
                 FPS=(F32*)&Package[2];
                 X=(F32*)&Package[6];
                 Y=(F32*)&Package[10];
@@ -41,6 +42,7 @@ void SSPReceivefuc(itr_protocol::StandSerialProtocol *SSP, itr_protocol::StandSe
                 y=*Y;
                 Area=*A;
                 fps=*FPS;
+                printf("%f %f %f %f\n",x,y,Area,fps);
                 break;
 
             }
@@ -137,7 +139,10 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *e)
             QPainter painter(ui->radarWidget);
             painter.drawImage(QPoint(0,0),img);
             painter.setPen(Qt::red);
-            painter.drawRect(Ui::x,Ui::y,40,40);
+            if(Ui::mode==2)
+                painter.drawRect(Ui::x,Ui::y,40,40);
+            else
+                painter.drawRect(140,100,40,40);
             return true;
         }
     }

@@ -139,14 +139,13 @@ S32 SSPSend(U8* Buffer,S32 Length)
 }
 
 //初始化参数
-void Init()
+void Init(int argc, char **argv)
 {
     config.color=0;
     config.pixel=0;
     config.fps=30;
 
-    // udpPackage.IP="255.255.255.255";
-    udpPackage.IP="192.168.199.159";
+    udpPackage.IP=argv[1];
     udpPackage.port=SendPort;
 
     itr_math::MathObjStandInit();
@@ -154,7 +153,11 @@ void Init()
     sspUdp.Init(0xA5 ,0x5A ,SSPSend);//串口发送函数 代替 NULL
     sspUdp.ProcessFunction[0]=&SSPReceivefuc;
 
-    uartOK=(uart.Init("/dev/ttyUSB0",115200)==0);
+
+    if(argc>2)
+        uartOK=(uart.Init(argv[2],115200)==0);
+    else
+        uartOK=false;
 
     GimbalInit();
 
@@ -164,6 +167,9 @@ void Init()
 
     targetPos.Width=40;
     targetPos.Height=40;
+    targetPos.X=(_width-targetPos.Width)*0.5;
+    targetPos.Y=(_height-targetPos.Height)*0.5;
+
     yuvBuffer.Init(2);
     yuvBuffer.AddBufferToList(new Picture);
     yuvBuffer.AddBufferToList(new Picture);
@@ -201,8 +207,6 @@ void* x264_thread(void* name)
             // usleep(10);
             continue;
         }
-        // pthread_mutex_lock(&mutexCompress);
-
         
         while (_imgcomp==NULL)
         {
@@ -242,8 +246,7 @@ void* camera_thread(void *name)
     }
 
     Picture *pic;
-    ///用于yuv到hls转换
-    yuv2hsl yuv2hsl_obj;
+
     F32* img_g;
     TimeClock tc;
     tc.Tick();
@@ -262,23 +265,21 @@ void* camera_thread(void *name)
             continue;
         }
         capture_get_picture(capture, pic);
-printf("New Img OK at time=%d\n",tc.Tick());
+
         img_g=matBuffer.GetBufferToWrite();
         while(img_g==NULL)
         {
-	    usleep(10);
+	        usleep(10);
             img_g=matBuffer.GetBufferToWrite();
         }
 
-        // yuv2hsl_obj.doyuv2hsl(_width,_height,pic->data[0],pic->data[1],pic->data[2],
-        //   img_hs,img_hs+_size);
         for (int i = 0; i < _size; ++i)
         {
             img_g[i]=pic->data[0][i];
         }
         yuvBuffer.SetBufferToRead(pic);
         matBuffer.SetBufferToRead(img_g);
-        printf("New Img YUV to HSL =%d\n",tc.Tick());
+        printf("New Img\n ");
     }
 
     capture_close(capture);
@@ -297,7 +298,7 @@ void* track_thread(void* name)
     tc.Tick();
     while(1)
     {
-        printf("track start !\n");
+        // printf("track start !\n");
         img_g=matBuffer.GetBufferToRead();
         if (img_g==NULL)
         {
@@ -307,18 +308,17 @@ void* track_thread(void* name)
         if(mode==2)
         {
             tempbuff=trackBuffer.GetBufferToWrite();
-            if(tempbuff==NULL)
+            while(tempbuff==NULL)
             {
-                //matBuffer.SetBufferToRead(img_g);
-                continue;
+                tempbuff=trackBuffer.GetBufferToWrite();
             }
             tc.Tick();
             Matrix img(_height,_width,img_g);
             if(!inited)
             {
                 tracker=new lktracking;
-                targetPos.X=(_width-targetPos.Width)*0.5;
-                targetPos.Y=(_height-targetPos.Height)*0.5;
+                
+                printf("%f %f %f %f\n",targetPos.X,targetPos.Y,targetPos.Width,targetPos.Height );
                 tracker->Init(img,targetPos);
                 inited=true;
             }
@@ -330,15 +330,16 @@ void* track_thread(void* name)
                     fps=1000/tc.Tick();
                     memcpy(tempbuff,&fps,4);
                     x=targetPos.X+targetPos.Width*0.5;
-                    memcpy(tempbuff,&x,4);
+                    memcpy(tempbuff+4,&x,4);
                     y=targetPos.Y+targetPos.Height*0.5;
-                    memcpy(tempbuff,&y,4);
+                    memcpy(tempbuff+8,&y,4);
                     Area=targetPos.Width*targetPos.Height;
-                    memcpy(tempbuff,&Area,4);
+                    memcpy(tempbuff+12,&Area,4);
+                    printf("Track:%f %f %f %f\n",targetPos.X,targetPos.Y,targetPos.Width,targetPos.Height );
                 }
                 else
                 {
-                    continue;   //TODO: to be reconsidered.
+                    // continue;   //TODO: to be reconsidered.
                 }
             }
             printf("Track OK, at time=%f\n", 1000/fps);
@@ -359,7 +360,7 @@ void* track_thread(void* name)
 
 int main (int argc, char **argv)
 {
-    Init();
+    Init(argc,argv);
    
     //新建图像采集线程，图像压缩线程
     pthread_t tidx264,tidcam,tidtrack;
@@ -375,7 +376,7 @@ int main (int argc, char **argv)
     int offset=0;
     for (; ; )
     { 
-        printf("main start !\n" );
+
         if(_udp.Receive(RecBuf,MaxRecLength))
         {
             //使用SSP进行解包

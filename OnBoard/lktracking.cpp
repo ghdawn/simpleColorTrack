@@ -188,7 +188,10 @@ FeatureNum= _select_pointer->SelectGoodFeature(rect,frame1Feature,trackedPoints)
     test.Tick();
     tracker.AddNext(current);
     tracker.max_iterations=10;
-
+    
+    tracker.Compute(frame1Feature,frame2Feature,FeatureNum,true);
+    tracker.Compute(frame2Feature,fbFeature,FeatureNum,false);
+    
     trackedPoints=0;
     for (i = 0; i < FeatureNum; ++i)
     {
