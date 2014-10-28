@@ -146,7 +146,7 @@ void Init(int argc, char **argv)
     config.fps=30;
 
     udpPackage.IP=argv[1];
-    udpPackage.port=SendPort;
+
 
     itr_math::MathObjStandInit();
 
@@ -186,7 +186,7 @@ void Init(int argc, char **argv)
 
 void* x264_thread(void* name)
 {
-    printf("x264 start !\n");
+ //   printf("x264 start !\n");
     void *encoder = vc_open(_width, _height, config.fps);
     if (!encoder)
     {
@@ -207,11 +207,10 @@ void* x264_thread(void* name)
             // usleep(10);
             continue;
         }
-        
         while (_imgcomp==NULL)
         {
             usleep(10);
-            _imgcomp=compressBuffer.GetBufferToWrite();    
+            _imgcomp=compressBuffer.GetBufferToWrite();
         }
         tc.Tick();
         int rc = vc_compress(encoder, pic->data, pic->stride,&imgCompressData , & imgLength);  //前两位是压缩后长度
@@ -228,7 +227,7 @@ void* x264_thread(void* name)
 
         compressBuffer.SetBufferToRead(_imgcomp);
 
-        printf("Compress OK at time=%d\n",tc.Tick());
+    //    printf("Compress OK at time=%d\n",tc.Tick());
     }
 
     vc_close(encoder);
@@ -279,7 +278,9 @@ void* camera_thread(void *name)
         }
         yuvBuffer.SetBufferToRead(pic);
         matBuffer.SetBufferToRead(img_g);
+
         printf("New Img\n ");
+
     }
 
     capture_close(capture);
@@ -298,13 +299,13 @@ void* track_thread(void* name)
     tc.Tick();
     while(1)
     {
-        // printf("track start !\n");
+
         img_g=matBuffer.GetBufferToRead();
         if (img_g==NULL)
         {
             continue;
         }
-        printf("mode int track\n",mode);
+      //  printf("mode int track\n",mode);
         if(mode==2)
         {
             tempbuff=trackBuffer.GetBufferToWrite();
@@ -321,6 +322,7 @@ void* track_thread(void* name)
                 printf("%f %f %f %f\n",targetPos.X,targetPos.Y,targetPos.Width,targetPos.Height );
                 tracker->Init(img,targetPos);
                 inited=true;
+                printf("Init: X:%f\tY:%f\n",targetPos.X,targetPos.Y);
             }
             else
             {
@@ -336,6 +338,7 @@ void* track_thread(void* name)
                     Area=targetPos.Width*targetPos.Height;
                     memcpy(tempbuff+12,&Area,4);
                     printf("Track:%f %f %f %f\n",targetPos.X,targetPos.Y,targetPos.Width,targetPos.Height );
+
                 }
                 else
                 {
@@ -360,6 +363,7 @@ void* track_thread(void* name)
 
 int main (int argc, char **argv)
 {
+
     Init(argc,argv);
    
     //新建图像采集线程，图像压缩线程
@@ -397,7 +401,7 @@ int main (int argc, char **argv)
         if(mode==2)
         {
             U8* tracktemp=trackBuffer.GetBufferToRead();
-            
+
             if(tracktemp!=NULL)
             {
                 MemoryCopy(tempbuff+offset,(void*)tracktemp,16);
@@ -411,7 +415,7 @@ int main (int argc, char **argv)
         udpPackage.len=SendLength;
         _udp.Send(udpPackage);
 
-        printf("Send OK at time=%d\n",tc.Tick());
+        //printf("Send OK at time=%d\n",tc.Tick());
     }
 
     return 0;
