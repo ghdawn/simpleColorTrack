@@ -146,7 +146,7 @@ void Init(int argc, char **argv)
     config.fps=30;
 
     udpPackage.IP=argv[1];
-
+    udpPackage.port=SendPort;
 
     itr_math::MathObjStandInit();
 
@@ -331,9 +331,9 @@ void* track_thread(void* name)
                     offset=0;
                     fps=1000/tc.Tick();
                     memcpy(tempbuff,&fps,4);
-                    x=targetPos.X+targetPos.Width*0.5;
+                    x=targetPos.X;//+targetPos.Width*0.5;
                     memcpy(tempbuff+4,&x,4);
-                    y=targetPos.Y+targetPos.Height*0.5;
+                    y=targetPos.Y;//+targetPos.Height*0.5;
                     memcpy(tempbuff+8,&y,4);
                     Area=targetPos.Width*targetPos.Height;
                     memcpy(tempbuff+12,&Area,4);
@@ -415,7 +415,7 @@ int main (int argc, char **argv)
         udpPackage.len=SendLength;
         _udp.Send(udpPackage);
 
-        //printf("Send OK at time=%d\n",tc.Tick());
+        printf("Send OK at time=%d\n",tc.Tick());
     }
 
     return 0;
