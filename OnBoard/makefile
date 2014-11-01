@@ -5,7 +5,8 @@ Inc = 	-I../../iTRLib/3rdparty/alglib/ \
 		-I../../iTRLib/itrbase/ \
 		-I../../iTRLib/itrvision/ \
 		-I../../iTRLib/itrdevice/\
-		-I../../iTRLib/itrsystem/
+		-I../../iTRLib/itrsystem/\
+		-I../../iTRLib/ix264/
 
 Libs= -L/usr/local/lib \
 		-L../../iTRLib/itralgorithm/bin/debug \
@@ -13,10 +14,11 @@ Libs= -L/usr/local/lib \
 		-L../../iTRLib/itrvision/bin/debug \
 		-L../../iTRLib/itrdevice/bin/debug \
 		-L../../iTRLib/itrsystem/bin/debug \
-		-litrvision  -litrsystem -litrbase \
-		-lavcodec -lswscale -lavutil -lx264 -lpthread
+		-L../../iTRLib/ix264/bin/debug \
+		-litrvision  -litrsystem -litrbase -litrdevice -lix264\
+		-lavcodec -lswscale -lavutil -lx264 -lpthread -lv4l2
 
-OBJS_SERVER=	$(ObjPath)capture.o $(ObjPath)vcompress.o  $(ObjPath)server.o \
+OBJS_SERVER=	$(ObjPath)server.o \
 				$(ObjPath)colortrack.o $(ObjPath)yuv2hsl.o $(ObjPath)gimbal.o $(ObjPath)lktracking.o
 
 

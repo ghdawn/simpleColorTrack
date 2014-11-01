@@ -9,7 +9,7 @@ extern "C" {
 
 #include "capture.h"
 #include "vcompress.h"
-
+#include "ix264.h"
 #include "itrsystem.h"
 #include "itrdevice.h"
 #include "basestruct.h"
@@ -46,7 +46,7 @@ int SendLength;
 
 itr_system::Udp _udp(ListenPort,false);
 itr_system::Udp::UdpPackage udpPackage;
-itr_system::AsyncBuffer<Picture*> yuvBuffer;
+itr_system::AsyncBuffer<U8*> yuvBuffer;
 itr_system::AsyncBuffer<F32*> matBuffer;
 itr_system::AsyncBuffer<U8*> trackBuffer;
 itr_system::AsyncBuffer<U8*> compressBuffer;
@@ -171,8 +171,8 @@ void Init(int argc, char **argv)
     targetPos.Y=(_height-targetPos.Height)*0.5;
 
     yuvBuffer.Init(2);
-    yuvBuffer.AddBufferToList(new Picture);
-    yuvBuffer.AddBufferToList(new Picture);
+    yuvBuffer.AddBufferToList(new U8[2*_size]);
+    yuvBuffer.AddBufferToList(new U8[2*_size]);
     matBuffer.Init(2);
     matBuffer.AddBufferToList(new F32[2*_size]);
     matBuffer.AddBufferToList(new F32[2*_size]);
@@ -187,16 +187,20 @@ void Init(int argc, char **argv)
 void* x264_thread(void* name)
 {
  //   printf("x264 start !\n");
-    void *encoder = vc_open(_width, _height, config.fps);
-    if (!encoder)
-    {
-        fprintf(stderr, "ERR: can't open x264 encoder\n");
-        exit(-1);
-    }
-    Picture *pic;
+    
+    itrx264::ix264 compress;
+    compress.Open(_width, _height, config.fps);
+    
+    U8 *data[4];
+    S32 stride[4];
+    U8* pic;
     U8* _imgcomp;
     TimeClock tc;
     tc.Tick();
+    stride[0]=_width;
+    stride[1]=_width/2;
+    stride[2]=_width/2;
+    stride[3]=0;
     while(1)
     {
 
@@ -213,7 +217,11 @@ void* x264_thread(void* name)
             _imgcomp=compressBuffer.GetBufferToWrite();
         }
         tc.Tick();
-        int rc = vc_compress(encoder, pic->data, pic->stride,&imgCompressData , & imgLength);  //前两位是压缩后长度
+        data[0]=pic;
+        data[1]=pic+_size;
+        data[2]=pic+_size+_size/4;
+        data[3]=NULL;
+        int rc = compress.Compress(data, stride,&imgCompressData , &imgLength);  //前两位是压缩后长度
 
         yuvBuffer.SetBufferToWrite(pic);
         if (rc < 0)
@@ -230,21 +238,18 @@ void* x264_thread(void* name)
     //    printf("Compress OK at time=%d\n",tc.Tick());
     }
 
-    vc_close(encoder);
+    compress.Close();
 }
 
 void* camera_thread(void *name)
 {
-    printf("camera start !\n");
-    void *capture = capture_open("/dev/video0", _width, _height, PIX_FMT_YUV420P);
+    // printf("camera start !\n");
+    // void *capture = capture_open("/dev/video0", _width, _height, PIX_FMT_YUV420P);
+    itr_device::v4linux capture;
+    capture.Open(0,_width,_height,2);
     printf("camera opened !\n");
-    if (!capture)
-    {
-        fprintf(stderr, "ERR: can't open '/dev/video0'\n");
-        exit(-1);
-    }
 
-    Picture *pic;
+    U8 *pic;
 
     F32* img_g;
     TimeClock tc;
@@ -263,8 +268,8 @@ void* camera_thread(void *name)
             usleep(10);
             continue;
         }
-        capture_get_picture(capture, pic);
-
+        // capture_get_picture(capture, pic);
+        capture.FetchFrame(pic,_size,NULL);
         img_g=matBuffer.GetBufferToWrite();
         while(img_g==NULL)
         {
@@ -274,16 +279,15 @@ void* camera_thread(void *name)
 
         for (int i = 0; i < _size; ++i)
         {
-            img_g[i]=pic->data[0][i];
+            img_g[i]=pic[i];
         }
         yuvBuffer.SetBufferToRead(pic);
         matBuffer.SetBufferToRead(img_g);
 
         printf("New Img\n ");
-
     }
 
-    capture_close(capture);
+    capture.Close();
 }
 
 void* track_thread(void* name)
