@@ -7,8 +7,6 @@ extern "C" {
 #include <libswscale/swscale.h>
 }
 
-#include "capture.h"
-#include "vcompress.h"
 #include "ix264.h"
 #include "itrsystem.h"
 #include "itrdevice.h"
@@ -254,6 +252,8 @@ void* camera_thread(void *name)
     F32* img_g;
     TimeClock tc;
     tc.Tick();
+    yuv2hsl yuv2hslobj;
+
     while(1)
     {
         if (mode==0)
@@ -269,7 +269,7 @@ void* camera_thread(void *name)
             continue;
         }
         // capture_get_picture(capture, pic);
-        capture.FetchFrame(pic,_size,NULL);
+        capture.FetchFrame(pic,_size*3/2,NULL);
         img_g=matBuffer.GetBufferToWrite();
         while(img_g==NULL)
         {
@@ -277,10 +277,7 @@ void* camera_thread(void *name)
             img_g=matBuffer.GetBufferToWrite();
         }
 
-        for (int i = 0; i < _size; ++i)
-        {
-            img_g[i]=pic[i];
-        }
+        yuv2hslobj.doyuv2hsl(_width,_height,pic,pic+_size,pic+_size+_size/4,img_g,img_g+_size);
         yuvBuffer.SetBufferToRead(pic);
         matBuffer.SetBufferToRead(img_g);
 
@@ -289,78 +286,68 @@ void* camera_thread(void *name)
 
     capture.Close();
 }
-
 void* track_thread(void* name)
 {
 
-    F32* img_g;
+    F32* img_hs;
     U8* tempbuff;
-    F32 _vx=0,_vy=0;
-    lktracking* tracker=NULL;
     U8 offset=0;
-    bool inited=false;
+    ColorTrack tracker;
     TimeClock tc;
     tc.Tick();
     while(1)
     {
-
-        img_g=matBuffer.GetBufferToRead();
-        if (img_g==NULL)
+        img_hs=matBuffer.GetBufferToRead();
+        if (img_hs==NULL)
         {
             continue;
         }
-      //  printf("mode int track\n",mode);
         if(mode==2)
         {
-            tempbuff=trackBuffer.GetBufferToWrite();
-            while(tempbuff==NULL)
-            {
-                tempbuff=trackBuffer.GetBufferToWrite();
-            }
             tc.Tick();
-            Matrix img(_height,_width,img_g);
-            if(!inited)
+            Matrix matH(_height,_width,img_hs),matS(_height,_width,img_hs+_size);
+            std::vector<itr_vision::Block> list=tracker.Track(matH,matS,ColorTable[config.color]);
+            
+            fps=1000/tc.Tick();
+            if(list.size()>0)
             {
-                tracker=new lktracking;
-                
-                printf("%f %f %f %f\n",targetPos.X,targetPos.Y,targetPos.Width,targetPos.Height );
-                tracker->Init(img,targetPos);
-                inited=true;
-                printf("Init: X:%f\tY:%f\n",targetPos.X,targetPos.Y);
+                x=list[0].x;
+                y=list[0].y;
+                Area=list[0].Area;
+                tempbuff=trackBuffer.GetBufferToWrite();
+                while(tempbuff==NULL)
+                {
+                    usleep(10);
+                    tempbuff=trackBuffer.GetBufferToWrite();
+                }
+                offset=0;
+                memcpy(tempbuff+offset,(void*)&fps,4);
+                offset+=4;
+                memcpy(tempbuff+offset,(void*)&x,4);
+                offset+=4;
+                memcpy(tempbuff+offset,(void*)&y,4);
+                offset+=4;
+                memcpy(tempbuff+offset,(void*)&Area,4);
+                offset+=4;
+                trackBuffer.SetBufferToRead(tempbuff);
+                GimbalControl( x, y,&controlData,controlLength);
+                if(uartOK)
+                    uart.Send((unsigned char*)controlData,controlLength);
             }
             else
             {
-                if(tracker->Go(img,targetPos,_vx,_vy))  // Pos information are in the targetPos, _vx and _vy are speeds.
-                {   //fps,x,y,Area
-                    offset=0;
-                    fps=1000/tc.Tick();
-                    memcpy(tempbuff,&fps,4);
-                    x=targetPos.X;//+targetPos.Width*0.5;
-                    memcpy(tempbuff+4,&x,4);
-                    y=targetPos.Y;//+targetPos.Height*0.5;
-                    memcpy(tempbuff+8,&y,4);
-                    Area=targetPos.Width*targetPos.Height;
-                    memcpy(tempbuff+12,&Area,4);
-                    printf("Track:%f %f %f %f\n",targetPos.X,targetPos.Y,targetPos.Width,targetPos.Height );
-
-                }
-                else
-                {
-                    // continue;   //TODO: to be reconsidered.
-                }
+                x=y=Area=0;
+                GimbalStop(&controlData,controlLength);
+                if(uartOK)
+                    uart.Send((unsigned char*)controlData,controlLength);
             }
+            matBuffer.SetBufferToWrite(img_hs);
             printf("Track OK, at time=%f\n", 1000/fps);
         }
         else
         {
-            if(tracker!=NULL)
-            {
-                delete tracker;
-                tracker=NULL;
-            }
+            matBuffer.SetBufferToWrite(img_hs);
         }
-        matBuffer.SetBufferToWrite(img_g);
-        trackBuffer.SetBufferToRead(tempbuff);
     }
 
 }
