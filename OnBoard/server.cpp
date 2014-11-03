@@ -7,8 +7,6 @@ extern "C" {
 #include <libswscale/swscale.h>
 }
 
-#include "capture.h"
-#include "vcompress.h"
 #include "ix264.h"
 #include "itrsystem.h"
 #include "itrdevice.h"
@@ -62,6 +60,7 @@ Config config;
 unsigned int _width,_height;
 unsigned int _size;
 
+int cameraID=0,cameraTunnel=0;
 F32 fps,x,y,Area;
 /**
 * 程序运行模式
@@ -153,9 +152,11 @@ void Init(int argc, char **argv)
     sspUdp.Init(0xA5 ,0x5A ,SSPSend);//串口发送函数 代替 NULL
     sspUdp.ProcessFunction[0]=&SSPReceivefuc;
 
+    cameraID=argv[2][0]-'0';
+    cameraTunnel=argv[3][0]-'0';
 
-    if(argc>2)
-        uartOK=(uart.Init(argv[2],115200)==0);
+    if(argc>4)
+        uartOK=(uart.Init(argv[argc-1],115200)==0);
     else
         uartOK=false;
 
