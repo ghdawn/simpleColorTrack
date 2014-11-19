@@ -148,16 +148,15 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *e)
             painter.setPen(Qt::red);
             if(Ui::mode==2)
             {
-                painter.drawRect(Ui::x,Ui::y,40,40);
-
-                sprintf(filename,"img%04d.png",count++);
-                QPainter p;
-                p.begin(&img);
-                p.setBrush(Qt::NoBrush);
-                p.setPen(Qt::red);
-                p.drawRect(Ui::x,Ui::y,40,40);
-                p.end();
-                img.save(filename);
+                painter.drawRect(Ui::x-20,Ui::y-20,40,40);
+//                sprintf(filename,"img%04d.png",count++);
+//                QPainter p;
+//                p.begin(&img);
+//                p.setBrush(Qt::NoBrush);
+//                p.setPen(Qt::red);
+//                p.drawRect(Ui::x,Ui::y,40,40);
+//                p.end();
+//                img.save(filename);
             }
             else
                 painter.drawRect(140,100,40,40);

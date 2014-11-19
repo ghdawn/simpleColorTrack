@@ -175,9 +175,7 @@ bool lktracking::InSide(const Point2D &point,const RectangleF &rect)const
 bool lktracking::Go(const Matrix &current,RectangleF &rect,F32 &Vx,F32 &Vy)
 {
 #define DEBUG 0
- TimeClock test;
-test.Tick();
-FeatureNum= _select_pointer->SelectGoodFeature(rect,frame1Feature,trackedPoints);
+ FeatureNum= _select_pointer->SelectGoodFeature(rect,frame1Feature,trackedPoints);
 
     printf("Feature: %d\n",FeatureNum);
     TimeClock clock;
@@ -185,7 +183,6 @@ FeatureNum= _select_pointer->SelectGoodFeature(rect,frame1Feature,trackedPoints)
     int i;
     bool Tracked=true;
     clock.Tick();
-    test.Tick();
     tracker.AddNext(current);
     tracker.max_iterations=10;
     
@@ -204,11 +201,8 @@ FeatureNum= _select_pointer->SelectGoodFeature(rect,frame1Feature,trackedPoints)
     ///Filter
     if(FeatureNum>0)
     {
-        // Debug_Info();
         printf("FBFilter: %d  \n",fb_filter());
-        // Debug_Info();
         printf("NCCFilter: %d  \n",ncc_filter(tracker.last->img[0],tracker.current->img[0]));
-        //Debug_Info();
     }
 
     ///计算光流速度速度
@@ -224,19 +218,7 @@ FeatureNum= _select_pointer->SelectGoodFeature(rect,frame1Feature,trackedPoints)
             ++trackedPoints;
         }
     }
-    if(DEBUG)
-    {
-        for(int i=0; i<trackedPoints; i++)
-        {
-            printf("%f ",x[i]);
-        }
-        printf("\n");
-        for(int i=0; i<trackedPoints; i++)
-        {
-            printf("%f ",y[i]);
-        }
-        printf("\n");
-    }
+
     cout << "Points: "<<trackedPoints << endl;
 
     ///如果有跟踪到的点,则对x方向和y方向做RANSAC过滤,把速度不相符的点过滤掉
@@ -248,7 +230,7 @@ FeatureNum= _select_pointer->SelectGoodFeature(rect,frame1Feature,trackedPoints)
         ransac.Process(x,trackedPoints, dropx);
         printf("drop: %d ",dropx);
         for(i=0; i<trackedPoints; ++i)
-            if(x[i]==Ransac<F32,F32>::INF)
+            if(fabs(x[i]-Ransac<F32,F32>::INF)<1)
             {
                 if(frame2Feature[indexNo[i]].Quality==0)
                 {
@@ -268,7 +250,7 @@ FeatureNum= _select_pointer->SelectGoodFeature(rect,frame1Feature,trackedPoints)
         printf("%d \n",dropy);
 
         for(i=0; i<trackedPoints; ++i)
-            if(y[i]==Ransac<F32,F32>::INF)
+            if(fabs(y[i]-Ransac<F32,F32>::INF)<1)
             {
                 if(frame2Feature[indexNo[i]].Quality==0)
                 {
@@ -309,10 +291,6 @@ FeatureNum= _select_pointer->SelectGoodFeature(rect,frame1Feature,trackedPoints)
             rect.Width*=boxScale;
             rect.Height*=boxScale;
         }
-    }
-    if(true)
-    {
-        // Debug_Info();
     }
 
     ///选择下一帧图像中的特征点
