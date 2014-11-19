@@ -3,6 +3,9 @@
 #include <QtNetwork>
 #include <math.h>
 #include "itrsystem.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 const int ServerPort=9031;
 const int RecPort=9032;
@@ -54,7 +57,7 @@ MainWindow::MainWindow(QWidget *parent) :
 {
     ui->setupUi(this);
     ui->radarWidget->installEventFilter(this);
-    setWindowTitle(tr("无人机视觉测试"));
+    setWindowTitle(tr("Tracking"));
     ui->doubleSpinBox->setRange(0.0,10.0);
     ui->doubleSpinBox_2->setRange(0.0,10.0);
     ui->doubleSpinBox_3->setRange(0.0,10.0);
@@ -131,16 +134,31 @@ void MainWindow::processPendingDatagram()
 
 bool MainWindow::eventFilter(QObject *obj, QEvent *e)
 {
+    static int count=0;
+    char filename[20];
     if(obj==ui->radarWidget)
     {
         if(e->type()==QEvent::Paint)
         {
             QImage img=QImage(imgbuffer,320,240,QImage::Format_RGB32);
+
+
             QPainter painter(ui->radarWidget);
             painter.drawImage(QPoint(0,0),img);
             painter.setPen(Qt::red);
             if(Ui::mode==2)
+            {
                 painter.drawRect(Ui::x,Ui::y,40,40);
+
+                sprintf(filename,"img%04d.png",count++);
+                QPainter p;
+                p.begin(&img);
+                p.setBrush(Qt::NoBrush);
+                p.setPen(Qt::red);
+                p.drawRect(Ui::x,Ui::y,40,40);
+                p.end();
+                img.save(filename);
+            }
             else
                 painter.drawRect(140,100,40,40);
             return true;
