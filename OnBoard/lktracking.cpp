@@ -198,7 +198,7 @@ bool lktracking::Go(const Matrix &current,RectangleF &rect,F32 &Vx,F32 &Vy)
             ++trackedPoints;
         }
     }
-    printf("Tracked:%d\n",trackedPoints);
+    printf("Tracked:%d at Time%d\n",trackedPoints,clock.Tick());
     ///Filter
     if(FeatureNum>0)
     {
@@ -220,8 +220,8 @@ bool lktracking::Go(const Matrix &current,RectangleF &rect,F32 &Vx,F32 &Vy)
         }
     }
 
-    cout << "Points: "<<trackedPoints << endl;
-
+    // cout << "Points: "<<trackedPoints << endl;
+    printf("Points:%d at Time %d\n",trackedPoints,clock.Tick());
     ///如果有跟踪到的点,则对x方向和y方向做RANSAC过滤,把速度不相符的点过滤掉
     if(trackedPoints>0)
     {
@@ -270,6 +270,7 @@ bool lktracking::Go(const Matrix &current,RectangleF &rect,F32 &Vx,F32 &Vy)
         printf("vx=%f vy=%f\n",Vx,Vy);
         trackedPoints-=drop;
     }
+    printf("V at %d\n", clock.Tick());
 
     if(trackedPoints<=0)
     {
@@ -310,11 +311,12 @@ bool lktracking::Go(const Matrix &current,RectangleF &rect,F32 &Vx,F32 &Vy)
     }
 
     _select_pointer->AddImage(current);
-static int t=0,all=0;
-t++;
-all+=clock.Tick();
-    printf("Track Time: %d",all/t);
-    printf("\n*****End  Track !*****\n\n");
+    printf("Final at time %d\n", clock.Tick());
+// static int t=0,all=0;
+// t++;
+// all+=clock.Tick();
+//     printf("Track Time: %d",all/t);
+//     printf("\n*****End  Track !*****\n\n");
     //printf("\033[12A");
     return (Tracked);
 }
