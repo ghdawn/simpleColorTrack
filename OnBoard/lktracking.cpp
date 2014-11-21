@@ -175,14 +175,15 @@ bool lktracking::InSide(const Point2D &point,const RectangleF &rect)const
 bool lktracking::Go(const Matrix &current,RectangleF &rect,F32 &Vx,F32 &Vy)
 {
 #define DEBUG 0
- FeatureNum= _select_pointer->SelectGoodFeature(rect,frame1Feature,trackedPoints);
-
-    printf("Feature: %d\n",FeatureNum);
-    TimeClock clock;
-
+    TimeClock clock;  
     int i;
     bool Tracked=true;
     clock.Tick();
+
+    FeatureNum= _select_pointer->SelectGoodFeature(rect,frame1Feature,trackedPoints);
+
+    printf("Feature: %d  at Time %d\n",FeatureNum,clock.Tick());
+        
     tracker.AddNext(current);
     tracker.max_iterations=10;
     

@@ -336,7 +336,7 @@ void* track_thread(void* name)
                 if(tracker->Go(img,targetPos,_vx,_vy))  // Pos information are in the targetPos, _vx and _vy are speeds.
                 {   //fps,x,y,Area
                     offset=0;
-                    fps=1000/tc.Tick();
+                    fps=1000.0/tc.Tick();
                     memcpy(tempbuff,&fps,4);
                     x=targetPos.X+targetPos.Width*0.5;
                     memcpy(tempbuff+4,&x,4);
