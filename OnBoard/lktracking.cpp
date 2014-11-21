@@ -19,7 +19,7 @@ void lktracking::Init(const Matrix &current,RectangleF &rect)
     // SelectKLTFeature select_tmp(current);//SelectKLTFeature select(current);
     _select_pointer =new SelectKLTFeature(current);
 
-    _select_pointer->mindist=5;
+    _select_pointer->mindist=6;
 
     ransac.Init(&oper);
     ransac.Times=10;
@@ -278,8 +278,8 @@ bool lktracking::Go(const Matrix &current,RectangleF &rect,F32 &Vx,F32 &Vy)
     if(Tracked)
     {
         F32 boxScale=1.0f;
-        boxScale=getScale(trackedPoints);
-        printf("scale:%f\n",boxScale);
+        // boxScale=getScale(trackedPoints);
+        // printf("scale:%f\n",boxScale);
         if(boxScale>1.05)
         {
             Tracked=false;
@@ -308,8 +308,7 @@ bool lktracking::Go(const Matrix &current,RectangleF &rect,F32 &Vx,F32 &Vy)
         }
     }
 
-    _select_pointer=new SelectKLTFeature(current);
-    _select_pointer->mindist = 6;
+    _select_pointer->AddImage(current);
 static int t=0,all=0;
 t++;
 all+=clock.Tick();

@@ -24,6 +24,7 @@ const int MaxSendLength=65535;
 const int MaxRecLength=25;
 const int ListenPort=9031,SendPort=9032;
 
+const int SleepTime=5;
 //压缩后的图像数据指针
 const void *imgCompressData;
 //压缩后的图像长度
@@ -209,12 +210,12 @@ void* x264_thread(void* name)
         pic=yuvBuffer.GetBufferToRead();
         if (pic==NULL)
         {
-            // usleep(10);
+            usleep(SleepTime);
             continue;
         }
         while (_imgcomp==NULL)
         {
-            usleep(10);
+            usleep(SleepTime);
             _imgcomp=compressBuffer.GetBufferToWrite();
         }
         tc.Tick();
@@ -259,22 +260,22 @@ void* camera_thread(void *name)
     {
         if (mode==0)
         {
-            usleep(10);
+            usleep(SleepTime);
             continue;
         }
         tc.Tick();
         pic=yuvBuffer.GetBufferToWrite();
         if (pic==NULL)
         {
-            usleep(10);
+            usleep(SleepTime);
             continue;
         }
         // capture_get_picture(capture, pic);
-        capture.FetchFrame(pic,_size,NULL);
+        capture.FetchFrame(pic,2*_size,NULL);
         img_g=matBuffer.GetBufferToWrite();
         while(img_g==NULL)
         {
-	        usleep(10);
+	        usleep(SleepTime);
             img_g=matBuffer.GetBufferToWrite();
         }
 
@@ -316,6 +317,7 @@ void* track_thread(void* name)
             tempbuff=trackBuffer.GetBufferToWrite();
             while(tempbuff==NULL)
             {
+                usleep(SleepTime);
                 tempbuff=trackBuffer.GetBufferToWrite();
             }
             tc.Tick();
@@ -336,9 +338,9 @@ void* track_thread(void* name)
                     offset=0;
                     fps=1000/tc.Tick();
                     memcpy(tempbuff,&fps,4);
-                    x=targetPos.X;//+targetPos.Width*0.5;
+                    x=targetPos.X+targetPos.Width*0.5;
                     memcpy(tempbuff+4,&x,4);
-                    y=targetPos.Y;//+targetPos.Height*0.5;
+                    y=targetPos.Y+targetPos.Height*0.5;
                     memcpy(tempbuff+8,&y,4);
                     Area=targetPos.Width*targetPos.Height;
                     memcpy(tempbuff+12,&Area,4);
