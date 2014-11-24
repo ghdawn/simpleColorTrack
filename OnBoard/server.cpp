@@ -70,7 +70,10 @@ F32 fps,x,y,Area;
 * 1  摄像头工作，跟踪不工作
 * 2  跟踪工作
 */
-U8 mode=0;
+const U8 STOP=0;
+const U8 CAPTURE=1;
+const U8 TRACK=2;
+U8 mode=STOP;
 
 
 ///SSP接受数据，进行命令解析
@@ -82,8 +85,11 @@ void SSPReceivefuc(itr_protocol::StandSerialProtocol *SSP, itr_protocol::StandSe
     {
         case 0x41:
         mode=Package[1];
-        if(mode!=2)
+        if(mode!=TRACK)
         {
+             GimbalControl(0,0,&controlData,controlLength);
+            if(uartOK)
+                uart.Send((unsigned char*)controlData,controlLength);
             GimbalStop(&controlData,controlLength);
             if(uartOK)
                 uart.Send((unsigned char*)controlData,controlLength);
@@ -155,7 +161,7 @@ void Init(int argc, char **argv)
 
     cameraID=argv[2][0]-'0';
     cameraTunnel=argv[3][0]-'0';
-
+    printf("camera: %d %d\n", cameraID,cameraTunnel);
     if(argc>4)
         uartOK=(uart.Init(argv[argc-1],115200)==0);
     else
@@ -248,7 +254,8 @@ void* camera_thread(void *name)
     // printf("camera start !\n");
     // void *capture = capture_open("/dev/video0", _width, _height, PIX_FMT_YUV420P);
     itr_device::v4linux capture;
-    capture.Open(0,_width,_height,2);
+    capture.Open(cameraID,_width,_height,2);
+    capture.SetTunnel(cameraTunnel);
     printf("camera opened !\n");
 
     U8 *pic;
@@ -258,7 +265,7 @@ void* camera_thread(void *name)
     tc.Tick();
     while(1)
     {
-        if (mode==0)
+        if (mode==STOP)
         {
             usleep(SleepTime);
             continue;
@@ -312,7 +319,7 @@ void* track_thread(void* name)
             continue;
         }
       //  printf("mode int track\n",mode);
-        if(mode==2)
+        if(mode==TRACK)
         {
             tempbuff=trackBuffer.GetBufferToWrite();
             while(tempbuff==NULL)
@@ -345,6 +352,9 @@ void* track_thread(void* name)
                     Area=targetPos.Width*targetPos.Height;
                     memcpy(tempbuff+12,&Area,4);
                     printf("Track:%f %f %f %f\n",targetPos.X,targetPos.Y,targetPos.Width,targetPos.Height );
+                    GimbalControl(x,y,&controlData,controlLength);
+                    if(uartOK)
+                        uart.Send((unsigned char*)controlData,controlLength);
 
                 }
                 else
@@ -393,7 +403,7 @@ int main (int argc, char **argv)
             //使用SSP进行解包
             sspUdp.ProcessRawByte((U8 *)RecBuf,MaxRecLength);
         }
-        if (mode==0)
+        if (mode==STOP)
         {
             usleep(10);
             continue;
@@ -405,7 +415,7 @@ int main (int argc, char **argv)
         memset(tempbuff,0,sizeof(tempbuff));
         tempbuff[offset++]=0x40;
         tempbuff[offset++]=mode;
-        if(mode==2)
+        if(mode==TRACK)
         {
             U8* tracktemp=trackBuffer.GetBufferToRead();
 
