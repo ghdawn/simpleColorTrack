@@ -4,7 +4,6 @@
 
 extern "C" {
 #include <libavcodec/avcodec.h>
-#include <libswscale/swscale.h>
 }
 
 #include "ix264.h"
@@ -13,7 +12,6 @@ extern "C" {
 #include "basestruct.h"
 #include "colortrack.h"
 #include "lktracking.h"
-#include "yuv2hsl.h"
 #include "gimbal.h"
 
 #define SIMPLEM
@@ -301,13 +299,33 @@ void* camera_thread(void *name)
 
 void* track_thread(void* name)
 {
-
     F32* img_g;
     U8* tempbuff;
     F32 _vx=0,_vy=0;
-    lktracking* tracker=NULL;
+    lktracking* tracker=new lktracking;
     U8 offset=0;
     bool inited=false;
+    
+    KalmanFilter kf;
+    kf.Init(4);
+    F32 data[24]= {1,0,1,0,
+                   0,1,0,1,
+                   0,0,1,0,
+                   0,0,0,1,
+                   1,0,0,0,
+                   0,1,0,0
+                  };
+    kf.F_x.CopyFrom(data);
+    kf.F_n.SetDiag(1);
+
+    Matrix Hv(2,4),R(2,2),Q(4,4);
+    R.SetDiag(0.306);
+    Hv.CopyFrom(data+8);
+    Q.SetDiag(0.0);
+    Vector z(2),X(4),v(2),n(4);
+
+
+
     TimeClock tc;
     tc.Tick();
     while(1)
@@ -329,19 +347,26 @@ void* track_thread(void* name)
             }
             tc.Tick();
             Matrix img(_height,_width,img_g);
+            X=kf.UpdateModel(Q,n);
             if(!inited)
             {
-                tracker=new lktracking;
-                
-                printf("%f %f %f %f\n",targetPos.X,targetPos.Y,targetPos.Width,targetPos.Height );
                 tracker->Init(img,targetPos);
                 inited=true;
                 printf("Init: X:%f\tY:%f\n",targetPos.X,targetPos.Y);
+                kf.x[0]=targetPos.X;
+                kf.x[1]=targetPos.Y;
+                kf.x[2]=0;
+                kf.x[3]=0;
             }
             else
             {
                 if(tracker->Go(img,targetPos,_vx,_vy))  // Pos information are in the targetPos, _vx and _vy are speeds.
                 {   //fps,x,y,Area
+                    z[0]=_vx;
+                    z[1]=_vy;
+                    X=kf.UpdateMeasure(Hv,R,z);
+                    targetPos.X=X[0];
+                    targetPos.Y=X[1];
                     offset=0;
                     fps=1000.0/tc.Tick();
                     memcpy(tempbuff,&fps,4);
@@ -366,10 +391,11 @@ void* track_thread(void* name)
         }
         else
         {
-            if(tracker!=NULL)
+            if(inited!=NULL)
             {
                 delete tracker;
-                tracker=NULL;
+                tracker=new lktracking;
+                inited=false;
             }
         }
         matBuffer.SetBufferToWrite(img_g);
