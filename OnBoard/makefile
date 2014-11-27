@@ -1,6 +1,6 @@
 ObjPath = obj/
 ExePath = bin/
-Mode=debug
+
 Inc = 	-I../../iTRLib/3rdparty/alglib/ \
 		-I../../iTRLib/itralgorithm/ \
 		-I../../iTRLib/itrbase/ \
@@ -9,14 +9,21 @@ Inc = 	-I../../iTRLib/3rdparty/alglib/ \
 		-I../../iTRLib/itrsystem/\
 		-I../../iTRLib/ix264/
 
-LibPaths= -L/usr/local/lib \
-		-L../../iTRLib/itralgorithm/bin/$(Mode) \
-		-L../../iTRLib/itrbase/bin/$(Mode) \
-		-L../../iTRLib/itrvision/bin/$(Mode) \
-		-L../../iTRLib/itrdevice/bin/$(Mode) \
-		-L../../iTRLib/itrsystem/bin/$(Mode) \
-		-L../../iTRLib/ix264/bin/$(Mode)
-
+LibPathsdebug= -L/usr/local/lib \
+		-L../../iTRLib/itralgorithm/bin/debug \
+		-L../../iTRLib/itrbase/bin/debug \
+		-L../../iTRLib/itrvision/bin/debug \
+		-L../../iTRLib/itrdevice/bin/debug \
+		-L../../iTRLib/itrsystem/bin/debug \
+		-L../../iTRLib/ix264/bin/debug
+LibPathsrelease= -L/usr/local/lib \
+		-L../../iTRLib/itralgorithm/bin/release \
+		-L../../iTRLib/itrbase/bin/release \
+		-L../../iTRLib/itrvision/bin/release \
+		-L../../iTRLib/itrdevice/bin/release \
+		-L../../iTRLib/itrsystem/bin/release \
+		-L../../iTRLib/ix264/bin/release
+		
 Libs=   -litrvision  -litrsystem -litrbase -litrdevice -litralgorithm -lix264\
 		-lavcodec -lswscale -lavutil -lx264 -lpthread -lv4l2
 
@@ -35,12 +42,11 @@ $(ObjPath)%.o: %.cpp
 
 track: $(OBJS_SERVER)
 	mkdir -p $(ExePath)
-	$(CXX) -o $(ExePath)$@ $^ $(LibPaths) $(Libs) $(Inc)
+	$(CXX) -o $(ExePath)$@ $^ $(LibPathsdebug) $(Libs) $(Inc)
 	
 release:	$(OBJS_SERVER)
-	Mode=release
 	mkdir -p $(ExePath)
-	$(CXX) -o $(ExePath)$@ $^ $(LibPaths) $(Libs) $(Inc)
+	$(CXX) -o $(ExePath)$@ $^ $(LibPathsrelease) $(Libs) $(Inc)
 
 .PHONY : clean
 clean: bin/ obj/

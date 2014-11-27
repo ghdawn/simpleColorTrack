@@ -194,6 +194,7 @@ bool lktracking::Go(const Matrix &img,RectangleF &rect,F32 &Vx,F32 &Vy)
     _current=temp;
     _current->Generate(img);        
    
+    printf("Pyramid OK  at Time %d\n",FeatureNum,clock.Tick());
     
     tracker.Compute(frame1Feature,frame2Feature,FeatureNum,_last,_current);
     tracker.Compute(frame2Feature,fbFeature,FeatureNum,_current,_last);
