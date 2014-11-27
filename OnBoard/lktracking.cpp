@@ -3,7 +3,7 @@
 using namespace std;
 using itr_math::Vector;
 lktracking::lktracking():
-    FeatureNum(150),frame1Feature(FeatureNum),frame2Feature(FeatureNum),fbFeature(FeatureNum)
+    FeatureNum(100),frame1Feature(FeatureNum),frame2Feature(FeatureNum),fbFeature(FeatureNum)
 {
     x=new F32[FeatureNum];
     y=new F32[FeatureNum];
@@ -194,7 +194,7 @@ bool lktracking::Go(const Matrix &img,RectangleF &rect,F32 &Vx,F32 &Vy)
     _current=temp;
     _current->Generate(img);        
    
-    printf("Pyramid OK  at Time %d\n",FeatureNum,clock.Tick());
+    printf("Pyramid OK  at Time %d\n",clock.Tick());
     
     tracker.Compute(frame1Feature,frame2Feature,FeatureNum,_last,_current);
     tracker.Compute(frame2Feature,fbFeature,FeatureNum,_current,_last);
