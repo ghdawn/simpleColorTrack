@@ -13,17 +13,22 @@ lktracking::lktracking():
     trackedPoints=0;
 }
 
-void lktracking::Init(const Matrix &current,RectangleF &rect)
+void lktracking::Init(const Matrix &img,RectangleF &rect)
 {
-    tracker.Init(current);
-    // SelectKLTFeature select_tmp(current);//SelectKLTFeature select(current);
-    _select_pointer =new SelectKLTFeature(current);
+    _last=new Pyramid;
+    _last->Init(img.GetCol(),img.GetRow(),4,2);
+    _current=new Pyramid;
+    _current->Init(img.GetCol(),img.GetRow(),4,2);
+    _current->Generate(img);
 
+    _select_pointer =new SelectKLTFeature(img.GetCol(),img.GetRow());
     _select_pointer->mindist=6;
+    _select_pointer->AddImage(_current);
 
     ransac.Init(&oper);
     ransac.Times=10;
 
+    tracker.max_iterations=10;
 }
 
 void lktracking::pairdistance(const vector<Point2D> &feature,vector<F32> &dist)
@@ -146,7 +151,7 @@ void lktracking::Debug_Info()
             count++;
         }
     }
-    Draw::Correspond(tracker.last->img[0],tracker.current->img[0],outU,outV,count,cor);
+    Draw::Correspond(_last->img[0],_current->img[0],outU,outV,count,cor);
     char file[20];
     sprintf(file,"bin/Debug/corr/corr%d",debugcount++);
     IOpnm::WritePGMFile(file,cor);
@@ -172,23 +177,26 @@ bool lktracking::InSide(const Point2D &point,const RectangleF &rect)const
     }
     return true;
 }
-bool lktracking::Go(const Matrix &current,RectangleF &rect,F32 &Vx,F32 &Vy)
+bool lktracking::Go(const Matrix &img,RectangleF &rect,F32 &Vx,F32 &Vy)
 {
-#define DEBUG 0
     TimeClock clock;  
     int i;
     bool Tracked=true;
     clock.Tick();
-
+    printf("\n*****Begin  Track !*****\n\n");
     FeatureNum= _select_pointer->SelectGoodFeature(rect,frame1Feature,trackedPoints);
 
     printf("Feature: %d  at Time %d\n",FeatureNum,clock.Tick());
-        
-    tracker.AddNext(current);
-    tracker.max_iterations=10;
+
+
+    Pyramid *temp=_last;
+    _last=_current;
+    _current=temp;
+    _current->Generate(img);        
+   
     
-    tracker.Compute(frame1Feature,frame2Feature,FeatureNum,true);
-    tracker.Compute(frame2Feature,fbFeature,FeatureNum,false);
+    tracker.Compute(frame1Feature,frame2Feature,FeatureNum,_last,_current);
+    tracker.Compute(frame2Feature,fbFeature,FeatureNum,_current,_last);
     
     trackedPoints=0;
     for (i = 0; i < FeatureNum; ++i)
@@ -203,7 +211,7 @@ bool lktracking::Go(const Matrix &current,RectangleF &rect,F32 &Vx,F32 &Vy)
     if(FeatureNum>0)
     {
         printf("FBFilter: %d  \n",fb_filter());
-        printf("NCCFilter: %d  \n",ncc_filter(tracker.last->img[0],tracker.current->img[0]));
+        printf("NCCFilter: %d  \n",ncc_filter(_last->img[0],_current->img[0]));
     }
 
     ///计算光流速度速度
@@ -310,13 +318,13 @@ bool lktracking::Go(const Matrix &current,RectangleF &rect,F32 &Vx,F32 &Vy)
         }
     }
 
-    _select_pointer->AddImage(current);
+    _select_pointer->AddImage(_current);
     printf("Final at time %d\n", clock.Tick());
 // static int t=0,all=0;
 // t++;
 // all+=clock.Tick();
 //     printf("Track Time: %d",all/t);
-//     printf("\n*****End  Track !*****\n\n");
+     printf("\n*****End  Track !*****\n\n");
     //printf("\033[12A");
     return (Tracked);
 }
@@ -327,6 +335,8 @@ lktracking::~lktracking()
     delete[] y;
     delete[] indexNo;
     delete[] dist;
+    delete _current;
+    delete _last;
     if(_select_pointer!=NULL)
     {
         delete _select_pointer;
