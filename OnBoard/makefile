@@ -27,7 +27,7 @@ LibPathsrelease= -L/usr/local/lib \
 Libs=   -litrvision  -litrsystem -litrbase -litrdevice -litralgorithm -lix264\
 		-lavcodec -lswscale -lavutil -lx264 -lpthread -lv4l2
 
-OBJS_SERVER=	$(ObjPath)server.o \
+OBJS_SERVER=	$(ObjPath)server.o $(ObjPath)detection.o\
 				$(ObjPath)colortrack.o $(ObjPath)yuv2hsl.o $(ObjPath)gimbal.o $(ObjPath)lktracking.o
 
 

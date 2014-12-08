@@ -13,9 +13,10 @@ extern "C" {
 #include "colortrack.h"
 #include "lktracking.h"
 #include "gimbal.h"
+#include "detection.h"
 
-#define SIMPLEM
-#define TIMEEVALUATION
+#define SIMPLEM 0
+#define TIMEEVALUATION 0
 using namespace std;
 
 const int MaxSendLength=65535;
@@ -302,6 +303,7 @@ void* track_thread(void* name)
     U8* tempbuff;
     F32 _vx=0,_vy=0;
     lktracking* tracker=new lktracking;
+    Detection* detect=new Detection;
     U8 offset=0;
     bool inited=false;
     
@@ -317,12 +319,15 @@ void* track_thread(void* name)
     kf.F_x.CopyFrom(data);
     kf.F_n.SetDiag(1);
 
-    Matrix Hv(2,4),R(2,2),Q(4,4);
-    R.SetDiag(0.306);
+    Matrix Hv(2,4),Hx(2,4), Rv(2,2),Rx(2,2),Q(4,4);
+    Rv.SetDiag(0.306);
+    Rx.SetDiag(0.1);
     Hv.CopyFrom(data+8);
+    Hx.CopyFrom(data+16);
     Q.SetDiag(0.0);
-    Vector z(2),X(4),v(2),n(4);
+    Vector z(2),X(4),n(4);
 
+    RectangleS rect(targetPos.X,targetPos.Y,targetPos.Width,targetPos.Height);
 
 FILE* fp;
     TimeClock tc;
@@ -346,10 +351,11 @@ FILE* fp;
             }
             tc.Tick();
             Matrix img(_height,_width,img_g);
-            X=kf.UpdateModel(Q,n);
+
             if(!inited)
             {
                 tracker->Init(img,targetPos);
+                detect->Init(img, rect);
                 inited=true;
                 printf("Init: X:%f\tY:%f\n",targetPos.X,targetPos.Y);
                 kf.x[0]=targetPos.X;
@@ -360,33 +366,40 @@ FILE* fp;
             }
             else
             {
+                X=kf.UpdateModel(Q,n);
+                targetPos.X=X[0];
+                targetPos.Y=X[1];
                 if(tracker->Go(img,targetPos,_vx,_vy))  // Pos information are in the targetPos, _vx and _vy are speeds.
                 {   //fps,x,y,Area
                     z[0]=_vx;
                     z[1]=_vy;
-                    X=kf.UpdateMeasure(Hv,R,z);
-                    targetPos.X=X[0];
-                    targetPos.Y=X[1];
-                    offset=0;
-                    fps=1000.0/tc.Tick();
-                    memcpy(tempbuff,&fps,4);
-                    x=targetPos.X+targetPos.Width*0.5;
-                    memcpy(tempbuff+4,&x,4);
-                    y=targetPos.Y+targetPos.Height*0.5;
-                    memcpy(tempbuff+8,&y,4);
-                    Area=targetPos.Width*targetPos.Height;
-                    memcpy(tempbuff+12,&Area,4);
-                    printf("Track:%f %f %f %f\n",targetPos.X,targetPos.Y,targetPos.Width,targetPos.Height );
-                    fprintf(fp, "%f %f\n", targetPos.X,targetPos.Y);
-                    GimbalControl(x,y,&controlData,controlLength);
-                    if(uartOK)
-                        uart.Send((unsigned char*)controlData,controlLength);
-
+                    X=kf.UpdateMeasure(Hv, Rv,z);
+                    printf("        %f %f\n%f %f %f %f\n",z[0],z[1],X[0],X[1],X[2],X[3]);
                 }
-                else
+                rect.X=X[0];
+                rect.Y=X[1];
+                if(detect->Go(img, rect))
                 {
-                    // continue;   //TODO: to be reconsidered.
+                    z[0]=rect.X;
+                    z[1]=rect.Y;
+                    X=kf.UpdateMeasure(Hx, Rx, z);
+                    printf("%f %f\n%f %f %f %f\n",z[0],z[1],X[0],X[1],X[2],X[3]);
                 }
+
+                offset=0;
+                fps=1000.0/tc.Tick();
+                memcpy(tempbuff,&fps,4);
+                x=X[0]+targetPos.Width*0.5;
+                memcpy(tempbuff+4,&x,4);
+                y=X[1]+targetPos.Height*0.5;
+                memcpy(tempbuff+8,&y,4);
+                Area=targetPos.Width*targetPos.Height;
+                memcpy(tempbuff+12,&Area,4);
+                printf("Track:%f %f\n",X[0],X[1]);
+                fprintf(fp, "%f %f\n", X[0],X[1]);
+                GimbalControl(x,y,&controlData,controlLength);
+                if(uartOK)
+                    uart.Send((unsigned char*)controlData,controlLength);
             }
             printf("Track OK, at time=%f\n", 1000/fps);
         }
@@ -396,11 +409,15 @@ FILE* fp;
             {
                 delete tracker;
                 tracker=new lktracking;
+                delete(detect);
+                detect=new Detection;
                 inited=false;
                 targetPos.Width=40;
                 targetPos.Height=40;
                 targetPos.X=(_width-targetPos.Width)*0.5;
                 targetPos.Y=(_height-targetPos.Height)*0.5;
+                rect.X=targetPos.X;
+                rect.Y=targetPos.Y;
                 fclose(fp);
             }
         }
