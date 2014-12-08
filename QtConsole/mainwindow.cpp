@@ -45,7 +45,7 @@ void SSPReceivefuc(itr_protocol::StandSerialProtocol *SSP, itr_protocol::StandSe
                 y=*Y;
                 Area=*A;
                 fps=*FPS;
-                printf("%f %f %f %f\n",x,y,Area,fps);
+                //printf("%f %f %f %f\n",x,y,Area,fps);
                 break;
 
             }
@@ -149,14 +149,14 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *e)
             if(Ui::mode==2)
             {
                 painter.drawRect(Ui::x-20,Ui::y-20,40,40);
-//                sprintf(filename,"img%04d.png",count++);
-//                QPainter p;
-//                p.begin(&img);
-//                p.setBrush(Qt::NoBrush);
-//                p.setPen(Qt::red);
-//                p.drawRect(Ui::x,Ui::y,40,40);
-//                p.end();
-//                img.save(filename);
+                sprintf(filename,"img%04d.png",count++);
+                QPainter p;
+                p.begin(&img);
+                p.setBrush(Qt::NoBrush);
+                p.setPen(Qt::red);
+                p.drawRect(Ui::x-20,Ui::y-20,40,40);
+                p.end();
+                img.save(filename);
             }
             else
                 painter.drawRect(140,100,40,40);
@@ -218,4 +218,10 @@ void MainWindow::on_pushButton_4_clicked()
 void MainWindow::on_pushButton_5_clicked()
 {
     Ui::udppackage.IP=ui->lineEdit->text().toStdString();
+}
+
+void MainWindow::on_pushButton_6_clicked()
+{
+    U8 buffer[2]={0x41,3};
+    sspUdp.SSPSendPackage(0,buffer,2);
 }

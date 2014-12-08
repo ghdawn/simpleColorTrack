@@ -38,28 +38,34 @@ void GimbalInit()
 }
 void GimbalStop(char**ControlData,int &length)
 {
-    Buffer[0] = 0x31;
-    Buffer[1] = 0;
-    Buffer[2] = 0;
-    sspObj.SSPSendPackage(0,Buffer,3);
+    ASU8(&Buffer[0]) = 0x31;
+    ASU8(&Buffer[1]) = 3;
+    ASS16(&Buffer[2]) = S16(0);
+    ASU8(&Buffer[4]) =3;
+    ASS16(&Buffer[5]) = S16(0);
+
+    sspObj.SSPSendPackage(0,Buffer,7);
     *ControlData=(char*)Buffer;
     length=len;
 }
 
 void GimbalControl(float x,float y,char**ControlData,int &length)
 {
+    const int Limit=50;
     float omegax;
     float omegay;
     omegax = (x-U0)*kpx + (xformer-x)*kdx;
     omegay = (y-V0)*kpy + (yformer-y)*kdy;
     xformer=x;
     yformer=y;
-    
-
+    omegax=(omegax>Limit)?Limit:omegax;
+    omegax=(omegax<-Limit)?-Limit:omegax;
+    omegay=(omegay>Limit)?Limit:omegay;
+    omegay=(omegay<-Limit)?-Limit:omegay;
     ASU8(&Buffer[0]) = 0x31;
-    ASU8(&Buffer[1]) = 1;
+    ASU8(&Buffer[1]) = 3;
     ASS16(&Buffer[2]) = S16(omegax*10);
-    ASU8(&Buffer[4]) =1;
+    ASU8(&Buffer[4]) =3;
     ASS16(&Buffer[5]) = S16(omegay*10);
 
     sspObj.SSPSendPackage(0,Buffer,7);

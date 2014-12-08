@@ -68,10 +68,12 @@ F32 fps,x,y,Area;
 * 1  摄像头工作，跟踪不工作
 * 2  跟踪工作
 */
-const U8 STOP=0;
+
+const U8 IDLE=0;
 const U8 CAPTURE=1;
 const U8 TRACK=2;
-U8 mode=STOP;
+const U8 EXIT=3;
+U8 mode=IDLE;
 
 
 ///SSP接受数据，进行命令解析
@@ -85,9 +87,6 @@ void SSPReceivefuc(itr_protocol::StandSerialProtocol *SSP, itr_protocol::StandSe
         mode=Package[1];
         if(mode!=TRACK)
         {
-             GimbalControl(0,0,&controlData,controlLength);
-            if(uartOK)
-                uart.Send((unsigned char*)controlData,controlLength);
             GimbalStop(&controlData,controlLength);
             if(uartOK)
                 uart.Send((unsigned char*)controlData,controlLength);
@@ -263,7 +262,7 @@ void* camera_thread(void *name)
     tc.Tick();
     while(1)
     {
-        if (mode==STOP)
+        if (mode==IDLE)
         {
             usleep(SleepTime);
             continue;
@@ -325,7 +324,7 @@ void* track_thread(void* name)
     Vector z(2),X(4),v(2),n(4);
 
 
-
+FILE* fp;
     TimeClock tc;
     tc.Tick();
     while(1)
@@ -357,6 +356,7 @@ void* track_thread(void* name)
                 kf.x[1]=targetPos.Y;
                 kf.x[2]=0;
                 kf.x[3]=0;
+                fp=fopen("pos.txt","w");
             }
             else
             {
@@ -377,6 +377,7 @@ void* track_thread(void* name)
                     Area=targetPos.Width*targetPos.Height;
                     memcpy(tempbuff+12,&Area,4);
                     printf("Track:%f %f %f %f\n",targetPos.X,targetPos.Y,targetPos.Width,targetPos.Height );
+                    fprintf(fp, "%f %f\n", targetPos.X,targetPos.Y);
                     GimbalControl(x,y,&controlData,controlLength);
                     if(uartOK)
                         uart.Send((unsigned char*)controlData,controlLength);
@@ -391,11 +392,16 @@ void* track_thread(void* name)
         }
         else
         {
-            if(inited!=NULL)
+            if(inited)
             {
                 delete tracker;
                 tracker=new lktracking;
                 inited=false;
+                targetPos.Width=40;
+                targetPos.Height=40;
+                targetPos.X=(_width-targetPos.Width)*0.5;
+                targetPos.Y=(_height-targetPos.Height)*0.5;
+                fclose(fp);
             }
         }
         matBuffer.SetBufferToWrite(img_g);
@@ -421,15 +427,20 @@ int main (int argc, char **argv)
     pthread_create(&tidtrack, NULL, track_thread, (void *)( "Track" ));
 
     int offset=0;
+    int recLength;
     for (; ; )
     { 
-
-        if(_udp.Receive(RecBuf,MaxRecLength))
+        recLength=_udp.Receive(RecBuf,MaxRecLength);
+        if(recLength>0)
         {
-            //使用SSP进行解包
-            sspUdp.ProcessRawByte((U8 *)RecBuf,MaxRecLength);
+            sspUdp.ProcessRawByte((U8 *)RecBuf,recLength);
         }
-        if (mode==STOP)
+        if(mode==EXIT)
+        {
+            uart.Close();
+            return 0;
+        }
+        if (mode==IDLE)
         {
             usleep(10);
             continue;
