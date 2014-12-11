@@ -319,20 +319,21 @@ void* track_thread(void* name)
     kf.F_x.CopyFrom(data);
     kf.F_n.SetDiag(1);
 
-    Matrix Hv(2,4),Hx(2,4), Rv(2,2),Rx(2,2),Q(4,4);
+    Matrix H(4, 4), Hv(2, 4), Hx(2, 4), Rv(2, 2), Rx(2, 2), Q(4, 4), R(4, 4);
     Rv.SetDiag(0.306);
-    Rx.SetDiag(0.1);
+    Rx.SetDiag(0.3);
     Hv.CopyFrom(data+8);
     Hx.CopyFrom(data+16);
-    Q.SetDiag(0.0);
-    Vector z(2),X(4),n(4);
+    Q.SetDiag(0.2);
+    R.SetDiag(0.2);
+    Vector z(2), X(4), n(4), Z(4);
 
     RectangleS rect(targetPos.X,targetPos.Y,targetPos.Width,targetPos.Height);
 
 FILE* fp;
-    TimeClock tc;
+    TimeClock tc, kalman;
     tc.Tick();
-    while(1)
+    while (mode != EXIT)
     {
 
         img_g=matBuffer.GetBufferToRead();
@@ -351,7 +352,7 @@ FILE* fp;
             }
             tc.Tick();
             Matrix img(_height,_width,img_g);
-
+            H.SetDiag(0.0);
             if(!inited)
             {
                 tracker->Init(img,targetPos);
@@ -363,9 +364,21 @@ FILE* fp;
                 kf.x[2]=0;
                 kf.x[3]=0;
                 fp=fopen("pos.txt","w");
+                kalman.Tick();
             }
             else
             {
+                F32 deltaT = kalman.Tick() / 1000.0;
+//                printf("deltaT:%f\n",deltaT);
+//                kf.F_x(0,2)=kf.F_x(1,3)=deltaT;
+                for (int i = 0; i < 2; ++i) {
+                    itr_math::NumericalObj->RandGaussian(n[i]);
+                    n[i] *= 0.2;
+                }
+                n[2] = n[0];
+                n[3] = n[1];
+                kf.F_n(0, 0) = kf.F_n(1, 1) = deltaT * deltaT * 0.5;
+                kf.F_n(2, 2) = kf.F_n(3, 3) = deltaT;
                 X=kf.UpdateModel(Q,n);
                 targetPos.X=X[0];
                 targetPos.Y=X[1];
@@ -373,19 +386,27 @@ FILE* fp;
                 {   //fps,x,y,Area
                     z[0]=_vx;
                     z[1]=_vy;
-                    X=kf.UpdateMeasure(Hv, Rv,z);
-                    printf("        %f %f\n%f %f %f %f\n",z[0],z[1],X[0],X[1],X[2],X[3]);
+//                    X=kf.UpdateMeasure(Hv, Rv,z);
+//                    printf("        %f %f\n%f %f %f %f\n",z[0],z[1],X[0],X[1],X[2],X[3]);
+                    Z[2] = _vx;
+                    Z[3] = _vy;
+                    H(2, 2) = H(3, 3) = 1;
                 }
                 rect.X=X[0];
                 rect.Y=X[1];
                 if(detect->Go(img, rect))
                 {
-                    z[0]=rect.X;
-                    z[1]=rect.Y;
-                    X=kf.UpdateMeasure(Hx, Rx, z);
-                    printf("%f %f\n%f %f %f %f\n",z[0],z[1],X[0],X[1],X[2],X[3]);
+//                    z[0]=rect.X;
+//                    z[1]=rect.Y;
+//                    X=kf.UpdateMeasure(Hx, Rx, z);
+//                    printf("%f %f\n%f %f %f %f\n",z[0],z[1],X[0],X[1],X[2],X[3]);
+                    Z[0] = rect.X;
+                    Z[1] = rect.Y;
+                    H(0, 0) = H(1, 1) = 1;
                 }
-
+                X = kf.UpdateMeasure(H, R, Z);
+//                X=kf.UpdateMeasure(Hv, Rv,z);
+                printf("%f %f %f %f\n%f %f %f %f\n", Z[0], Z[1], Z[2], Z[3], X[0], X[1], X[2], X[3]);
                 offset=0;
                 fps=1000.0/tc.Tick();
                 memcpy(tempbuff,&fps,4);

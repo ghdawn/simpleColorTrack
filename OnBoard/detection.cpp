@@ -122,8 +122,8 @@ bool Detection::Go(const Matrix &img, RectangleS &rect) {
     if (best > 0) {
         rect = rects[0];
         detected = true;
-        itr_vision::Draw::Rectangle(imginput, rect, 0);
-        itr_vision::IOpnm::WritePGMFile("at.pgm", imginput);
+//        itr_vision::Draw::Rectangle(imginput, rect, 0);
+//        itr_vision::IOpnm::WritePGMFile("at.pgm", imginput);
     }
 //    F32 dis1, dis2, mind = 99999;
 //    S32 index = -1;
