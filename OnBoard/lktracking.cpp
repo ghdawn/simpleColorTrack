@@ -250,12 +250,6 @@ bool lktracking::Go(const Matrix &img,RectangleF &rect,F32 &Vx,F32 &Vy)
             }
         std::sort(x,x+trackedPoints);
         Vx=x[(trackedPoints-dropx)/2];
-//        if(fabs(Vx)>25)
-//        {
-//            Tracked=false;
-//            //printf("Failure!!\n");
-//        }
-
         ransac.Process(y,trackedPoints, dropy);
         printf("%d \n",dropy);
 
@@ -268,14 +262,9 @@ bool lktracking::Go(const Matrix &img,RectangleF &rect,F32 &Vx,F32 &Vy)
                     frame2Feature[indexNo[i]].Quality=-LKTracker::LARGE_RESIDUE;
                 }
             }
-
         std::sort(y,y+trackedPoints);
         Vy=y[(trackedPoints-dropy)/2];
-//        if(fabs(Vy)>25)
-//        {
-//            Tracked=false;
-//            printf("Failure!!\n");
-//        }
+
         printf("vx=%f vy=%f\n",Vx,Vy);
         trackedPoints-=drop;
     }
@@ -286,23 +275,23 @@ bool lktracking::Go(const Matrix &img,RectangleF &rect,F32 &Vx,F32 &Vy)
         Tracked=false;
     }
 
-    if(Tracked)
-    {
-        F32 boxScale=1.0f;
-        // boxScale=getScale(trackedPoints);
-        // printf("scale:%f\n",boxScale);
-        if(boxScale>1.05)
-        {
-            Tracked=false;
-        }
-        else
-        {
-            rect.X+=Vx-rect.Width*(boxScale-1.0f)/2.0f;
-            rect.Y+=Vy-rect.Height*(boxScale-1.0f)/2.0f;
-            rect.Width*=boxScale;
-            rect.Height*=boxScale;
-        }
-    }
+//    if(Tracked)
+//    {
+//        F32 boxScale=1.0f;
+//        // boxScale=getScale(trackedPoints);
+//        // printf("scale:%f\n",boxScale);
+//        if(boxScale>1.05)
+//        {
+//            Tracked=false;
+//        }
+//        else
+//        {
+//            rect.X+=Vx-rect.Width*(boxScale-1.0f)/2.0f;
+//            rect.Y+=Vy-rect.Height*(boxScale-1.0f)/2.0f;
+//            rect.Width*=boxScale;
+//            rect.Height*=boxScale;
+//        }
+//    }
 
     ///选择下一帧图像中的特征点
 

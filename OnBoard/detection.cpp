@@ -25,8 +25,9 @@ void Detection::Train(const Matrix &img, const RectangleS &rect) {
     //Variance Init
     itr_vision::IntegralImg::Integral(imginput, imgInt);
     itr_vision::IntegralImg::Integral2(imginput, imgInt2);
+    N = (rect.Height * rect.Width);
     EI = imgInt(rect.Y, rect.X) + imgInt(rect.Y + rect.Height, rect.X + rect.Width) - imgInt(rect.Y + rect.Height, rect.X) - imgInt(rect.Y, rect.X + rect.Width);
-    VI = (imgInt2(rect.Y, rect.X) + imgInt2(rect.Y + rect.Height, rect.X + rect.Width) - imgInt2(rect.Y + rect.Height, rect.X) - imgInt2(rect.Y, rect.X + rect.Width)) * (rect.Height * rect.Width) - EI * EI;
+    VI = (imgInt2(rect.Y, rect.X) + imgInt2(rect.Y + rect.Height, rect.X + rect.Width) - imgInt2(rect.Y + rect.Height, rect.X) - imgInt2(rect.Y, rect.X + rect.Width)) * N - EI * EI;
 
     itr_vision::Pick::Rectangle(imginput, rect, imgpatch);
     itr_vision::Scale::Bilinear(imgpatch, imgnorm);
@@ -68,20 +69,14 @@ bool Detection::Go(const Matrix &img, RectangleS &rect) {
     itr_vision::IntegralImg::Integral(imginput, imgInt);
     itr_vision::IntegralImg::Integral2(imginput, imgInt2);
     //begin work
-    TimeClock clock;
 
-    int pcount;
     F32 e;
     F32 v;
-    clock.Tick();
-    vector<itr_math::Matrix> imglist;
     int x_last = rect.X, y_last = rect.Y;
     bool detected = false;
     int t1, t2;
     F32 cur, best = 0;
-    pcount = 0;
 
-    clock.Tick();
     int range = 20;
     for (int y = y_last - range; y < y_last + range; y += 1) {
         for (int x = x_last - range; x < x_last + range; x += 1) {
@@ -89,7 +84,7 @@ bool Detection::Go(const Matrix &img, RectangleS &rect) {
             if (y < 0 || y >= imginput.GetRow())continue;
             //Variance filter
             e = imgInt(y, x) + imgInt(y + rect.Height, x + rect.Width) - imgInt(y + rect.Height, x) - imgInt(y, x + rect.Width);
-            v = (imgInt2(y, x) + imgInt2(y + rect.Height, x + rect.Width) - imgInt2(y + rect.Height, x) - imgInt2(y, x + rect.Width)) * (rect.Height * rect.Width) - e * e;
+            v = (imgInt2(y, x) + imgInt2(y + rect.Height, x + rect.Width) - imgInt2(y + rect.Height, x) - imgInt2(y, x + rect.Width)) * N - e * e;
 
             if (e < EI * 0.4 || e > EI * 1.6) {
                 continue;
@@ -106,59 +101,13 @@ bool Detection::Go(const Matrix &img, RectangleS &rect) {
             if (cur > best) {
                 rects[0].X = x;
                 rects[0].Y = y;
-                itr_vision::Draw::Rectangle(imginput, rects[0], 255);
                 best = cur;
             }
-//            if (cur > 0.5) {
-//                rects[imglist.size()].X = x;
-//                rects[imglist.size()].Y = y;
-//                imglist.push_back(imgpatch);
-//            }
-//            pcount++;
         }
     }
-    t1 = clock.Tick();
-    printf("\ntime:%d %d %f\n", t1, pcount, (t1 + 0.1) / pcount);
     if (best > 0) {
         rect = rects[0];
         detected = true;
-//        itr_vision::Draw::Rectangle(imginput, rect, 0);
-//        itr_vision::IOpnm::WritePGMFile("at.pgm", imginput);
     }
-//    F32 dis1, dis2, mind = 99999;
-//    S32 index = -1;
-//    printf("size:%d\ndis:", imglist.size());
-//    for (int i = 0; i < imglist.size(); i++) {
-//        itr_vision::Scale::Bilinear(imglist[i], imgnorm);
-//        Vector imgvec(patchsize * patchsize, imgnorm.GetData());
-//        nnc.Classify(imgvec, dis1, dis2);
-//
-//        if (dis1 < dis2 && mind > dis1) {
-//            mind = dis1;
-//            index = i;
-//        }
-//    }
-//    if (index > 0) {
-//        rect.X = rects[index].X;
-//        rect.Y = rects[index].Y;
-//    }
-//    else
-//    {
-//        rect.X=-1;
-//        rect.Y=-1;
-//    }
-//    t2 = clock.Tick();
-//    printf("\n");
-//    detected = false;
-//    if (imglist.size() > 0) {
-//
-//        for (int i = 0; i < imglist.size(); i++)
-//            itr_vision::Draw::Rectangle(imginput, rects[i], 255);
-
-//        detected = true;
-//    }
-
-    printf("Count:%d,t1:%d,t2: %d ms\n", imglist.size(), t1, t2);
-    std::cout << std::endl;
     return detected;
 }

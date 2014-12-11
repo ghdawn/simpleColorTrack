@@ -36,5 +36,6 @@ private:
     itr_vision::ConvoluteSquare conv;
     RectangleS rects[150];
 
+    S32 N;
 };
 

@@ -207,16 +207,17 @@ void* x264_thread(void* name)
     stride[1]=_width/2;
     stride[2]=_width/2;
     stride[3]=0;
-    while(1)
+    while (mode != EXIT)
     {
 
         // 压缩图像
         pic=yuvBuffer.GetBufferToRead();
-        if (pic==NULL)
+        while (pic == NULL)
         {
             usleep(SleepTime);
-            continue;
+            pic = yuvBuffer.GetBufferToRead();
         }
+        _imgcomp = compressBuffer.GetBufferToWrite();
         while (_imgcomp==NULL)
         {
             usleep(SleepTime);
@@ -261,7 +262,7 @@ void* camera_thread(void *name)
     F32* img_g;
     TimeClock tc;
     tc.Tick();
-    while(1)
+    while (mode != EXIT)
     {
         if (mode==IDLE)
         {
@@ -270,10 +271,10 @@ void* camera_thread(void *name)
         }
         tc.Tick();
         pic=yuvBuffer.GetBufferToWrite();
-        if (pic==NULL)
+        while (pic == NULL)
         {
             usleep(SleepTime);
-            continue;
+            pic = yuvBuffer.GetBufferToWrite();
         }
         // capture_get_picture(capture, pic);
         capture.FetchFrame(pic,2*_size,NULL);
