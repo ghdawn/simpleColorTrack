@@ -12,7 +12,6 @@ extern "C" {
 #include "itrdevice.h"
 #include "basestruct.h"
 #include "colortrack.h"
-#include "lktracking.h"
 #include "yuv2hsl.h"
 #include "gimbal.h"
 
@@ -246,7 +245,7 @@ void* x264_thread(void* name)
 void* camera_thread(void *name)
 {
     itr_device::v4linux capture;
-    capture.Open(0,_width,_height,2);
+    capture.Open(cameraID,_width,_height,2);
     printf("camera opened !\n");
 
     U8 *pic;
