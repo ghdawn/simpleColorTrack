@@ -7,7 +7,7 @@
 const int ServerPort=9031;
 const int RecPort=9032;
 
-namespace Ui
+namespace UdpData
 {
 itr_system::Udp udp;
 itr_system::Udp::UdpPackage udppackage;
@@ -43,6 +43,9 @@ void SSPReceivefuc(itr_protocol::StandSerialProtocol *SSP, itr_protocol::StandSe
                 Area=*A;
                 fps=*FPS;
                 printf("%f %f %f %f\n",x,y,Area,fps);
+                FILE* fout=fopen("pos.txt","a");
+                fprintf(fout,"%f %f %f %f\n",x,y,Area,fps);
+                fclose(fout);
                 break;
 
             }
@@ -72,9 +75,9 @@ MainWindow::MainWindow(QWidget *parent) :
     }
 
 
-    Ui::Init();
-    sspUdp.Init(0xA5,0x5A,Ui::SSPSend);
-    sspUdp.ProcessFunction[0]=&Ui::SSPReceivefuc;
+    UdpData::Init();
+    sspUdp.Init(0xA5,0x5A,UdpData::SSPSend);
+    sspUdp.ProcessFunction[0]=&UdpData::SSPReceivefuc;
     sender=new QUdpSocket(this);
     receiver=new QUdpSocket(this);
     receiver->bind(RecPort);
@@ -100,30 +103,42 @@ MainWindow::~MainWindow()
 void MainWindow::processPendingDatagram()
 {
     const int SSPLength=18+6;
+    static int count=0;
+    char filename[]="img00000000.pgm";
     while(receiver->hasPendingDatagrams())
     {
         int Length=receiver->pendingDatagramSize();
         Length=receiver->readDatagram((char*)tempbuff,receiver->pendingDatagramSize());
         sspUdp.ProcessRawByte(tempbuff,SSPLength);
-        QString str=QString("x:%1,y:%2\nfps:%3\n").arg(Ui::x).arg(Ui::y).arg(Ui::fps);
+        QString str=QString("x:%1,y:%2\nfps:%3\n").arg(UdpData::x).arg(UdpData::y).arg(UdpData::fps);
         ui->label_2->setText(str);
         int got;
         AVPacket pkt;
         pkt.data = tempbuff+SSPLength;
         pkt.size = Length-SSPLength;
+        sprintf(filename,"x264/x264%06d.x264",count);
+        FILE* fx264=fopen(filename,"w");
+        for(int i=0;i<pkt.size;i++)
+            fprintf(fx264,"%c",pkt.data[i]);
+        fclose(fx264);
         int ret = avcodec_decode_video2(dec, frame, &got, &pkt);
         if(got<=0)
             continue;
         int k=0;
+        sprintf(filename,"img/img%06d.pgm",count++);
+        FILE* fp=fopen(filename,"w");
+        fprintf(fp,"P5\n320 240\n255\n");
         for(int j=0;j<240;j++)
-        for(int i=0;i<320;i++)
-        {
-            imgbuffer[4*k  ]=frame->data[0][(i+j*352)];
-            imgbuffer[4*k+1]=frame->data[0][(i+j*352)];
-            imgbuffer[4*k+2]=frame->data[0][(i+j*352)];
-            imgbuffer[4*k+3]=frame->data[0][(i+j*352)];
-            k++;
-        }
+            for(int i=0;i<320;i++)
+            {
+                fprintf(fp,"%c",frame->data[0][i+j*352]);
+                imgbuffer[4*k  ]=frame->data[0][(i+j*352)];
+                imgbuffer[4*k+1]=frame->data[0][(i+j*352)];
+                imgbuffer[4*k+2]=frame->data[0][(i+j*352)];
+                imgbuffer[4*k+3]=frame->data[0][(i+j*352)];
+                k++;
+            }
+        fclose(fp);
         ui->radarWidget->update();
 
     }
@@ -139,8 +154,12 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *e)
             QPainter painter(ui->radarWidget);
             painter.drawImage(QPoint(0,0),img);
             painter.setPen(Qt::red);
-            if(Ui::mode==2)
-                painter.drawRect(Ui::x,Ui::y,40,40);
+            if(UdpData::mode==2)
+            {
+                painter.drawRect(UdpData::x-20,UdpData::y-20,40,40);
+                painter.drawLine(UdpData::x-8,UdpData::y,UdpData::x+8,UdpData::y);
+                painter.drawLine(UdpData::x,UdpData::y-8,UdpData::x,UdpData::y+8);
+            }
             else
                 painter.drawRect(140,100,40,40);
             return true;
@@ -200,5 +219,5 @@ void MainWindow::on_pushButton_4_clicked()
 
 void MainWindow::on_pushButton_5_clicked()
 {
-    Ui::udppackage.IP=ui->lineEdit->text().toStdString();
+    UdpData::udppackage.IP=ui->lineEdit->text().toStdString();
 }
