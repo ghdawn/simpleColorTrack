@@ -17,18 +17,22 @@ static float yformer=0;
 
 U8 Buffer[20];
 S32 len;
-S32 SSPSendfun(U8* buffer,S32 Length)
+
+class SSPSendfun : public itr_protocol::StandSerialProtocol::SSPDataSendFun
 {
-    for (int i = 0; i < Length; ++i)
+    S32 Do(U8 *buffer, S32 Length)
     {
-        Buffer[i]=buffer[i];
+        for (int i = 0; i < Length; ++i) {
+            Buffer[i] = buffer[i];
+        }
+        return len = Length;
     }
-    return len=Length;
-}
+};
+
 
 void GimbalInit()
 {
-    sspObj.Init(0xA5 ,0x5A ,SSPSendfun);
+    sspObj.Init(0xA5, 0x5A, new SSPSendfun);
     FILE* fp=fopen("pidpara.data","r");
     if(fp>0)
     {

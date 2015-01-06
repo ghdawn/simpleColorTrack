@@ -73,69 +73,70 @@ U8 mode=0;
 
 
 ///SSP接受数据，进行命令解析
-
-void SSPReceivefuc(itr_protocol::StandSerialProtocol *SSP, itr_protocol::StandSerialFrameStruct *SSFS,U8 *Package,S32 PackageLength)
+class SSPReceiveFunc : public itr_protocol::StandSerialProtocol::SSPDataRecFun
 {
-    F32 *a,*b,*c,*d;
-    switch(Package[0])
+    void Do(itr_protocol::StandSerialProtocol *SSP, itr_protocol::StandSerialFrameStruct *SSFS, U8 *Package, S32 PackageLength)
     {
-        case 0x41:
-        mode=Package[1];
-        if(mode!=2)
+        F32 *a, *b, *c, *d;
+        switch (Package[0])
         {
-            GimbalStop(&controlData,controlLength);
-            if(uartOK)
-                uart.Send((unsigned char*)controlData,controlLength);
+            case 0x41:
+                mode = Package[1];
+                if (mode != 2) {
+                    GimbalStop(&controlData, controlLength);
+                    if (uartOK)
+                        uart.Send((unsigned char *) controlData, controlLength);
+                }
+                break;
+            case 0x42:
+                MemoryCopy(Package, Package + 1, 16);
+                a = (F32 *) (Package);
+                b = (F32 *) (Package + 4);
+                c = (F32 *) (Package + 8);
+                d = (F32 *) (Package + 12);
+                GimbalUpdatePID(*a, *b, *c, *d);
+                break;
+            case 0x44:
+                config.color = Package[1];
+                break;
+            case 0x43:
+                config.fps = Package[1];
+                config.pixel = Package[2];
+                break;
+            case 0x45:
+                MemoryCopy(Package, Package + 1, 8);
+                a = (F32 *) (Package);
+                b = (F32 *) (Package + 4);
+                targetPos.Width = *a;
+                targetPos.Height = *b;
+                break;
+                //直接转发
+            default:
+                if (uartOK)
+                    uart.Send((U8 *) SSFS, SSP->GetSSFSLength(SSFS));
+                break;
         }
-        break;
-        case 0x42:
-        MemoryCopy(Package,Package+1,16);
-        a=(F32*)(Package);
-        b=(F32*)(Package+4);
-        c=(F32*)(Package+8);
-        d=(F32*)(Package+12);
-        GimbalUpdatePID(*a,*b,*c,*d);
-        break;
-        case 0x44:
-        config.color=Package[1];
-        break;
-        case 0x43:
-        config.fps=Package[1];
-        config.pixel=Package[2];
-        break;
-        case 0x45:
-        MemoryCopy(Package,Package+1,8);
-        a=(F32*)(Package);
-        b=(F32*)(Package+4);
-        targetPos.Width=*a;
-        targetPos.Height=*b;
-        break;
-    //直接转发
-        default:
-        if(uartOK)
-            uart.Send((U8*)SSFS,SSP->GetSSFSLength(SSFS));
-        break;
     }
-}
+};
 
 
+class SSPSend : public itr_protocol::StandSerialProtocol::SSPDataSendFun {
+    S32 Do(U8 *Buffer, S32 Length) {
+        memcpy(SendBuf, Buffer, Length);
 
+        U8 *img = compressBuffer.GetBufferToRead();
+        while (img == NULL) {
+            img = compressBuffer.GetBufferToRead();
+        }
+        memcpy(SendBuf + Length, (U8 *) (img + 4), *((int *) img));
+        SendLength = Length + *((int *) img);
+
+        compressBuffer.SetBufferToWrite(img);
+        return SendLength;
+    }
+};
 //准备要发送的数据
-S32 SSPSend(U8* Buffer,S32 Length)
-{
-    memcpy(SendBuf,Buffer,Length);
 
-    U8* img=compressBuffer.GetBufferToRead();
-    while(img==NULL)
-    {
-         img=compressBuffer.GetBufferToRead();
-    }
-    memcpy(SendBuf+Length,(U8*)(img+4),*((int*)img));
-    SendLength=Length+*((int*)img);
-
-    compressBuffer.SetBufferToWrite(img);
-    return SendLength;
-}
 
 //初始化参数
 void Init(int argc, char **argv)
@@ -149,8 +150,8 @@ void Init(int argc, char **argv)
 
     itr_math::MathObjStandInit();
 
-    sspUdp.Init(0xA5 ,0x5A ,SSPSend);//串口发送函数 代替 NULL
-    sspUdp.ProcessFunction[0]=&SSPReceivefuc;
+    sspUdp.Init(0xA5, 0x5A, new SSPSend);//串口发送函数 代替 NULL
+    sspUdp.AddDataRecFunc(new SSPReceiveFunc, 0);
 
     cameraID=argv[2][0]-'0';
     cameraTunnel=argv[3][0]-'0';
@@ -309,7 +310,7 @@ void* track_thread(void* name)
             Matrix matH(_height,_width,img_hs),matS(_height,_width,img_hs+_size);
             std::vector<itr_vision::Block> list=tracker.Track(matH,matS,ColorTable[config.color]);
             
-            fps=1000/tc.Tick();
+
             if(list.size()>0)
             {
                 x=list[0].x;
@@ -321,8 +322,7 @@ void* track_thread(void* name)
                     usleep(10);
                     tempbuff=trackBuffer.GetBufferToWrite();
                 }
-                offset=0;
-                memcpy(tempbuff+offset,(void*)&fps,4);
+
                 offset+=4;
                 memcpy(tempbuff+offset,(void*)&x,4);
                 offset+=4;
@@ -343,7 +343,7 @@ void* track_thread(void* name)
                     uart.Send((unsigned char*)controlData,controlLength);
             }
             matBuffer.SetBufferToWrite(img_hs);
-            printf("Track OK, at time=%f\n", 1000/fps);
+            printf("Track OK, at time=%d\n", tc.Tick());
         }
         else
         {
@@ -397,6 +397,8 @@ int main (int argc, char **argv)
             if(tracktemp!=NULL)
             {
                 MemoryCopy(tempbuff+offset,(void*)tracktemp,16);
+                fps = 1000 / tc.Tick();
+                memcpy(tempbuff + offset, (void *) &fps, 4);
                 trackBuffer.SetBufferToWrite(tracktemp);
             }
         }
@@ -407,7 +409,7 @@ int main (int argc, char **argv)
         udpPackage.len=SendLength;
         _udp.Send(udpPackage);
 
-        printf("Send OK at time=%d\n",tc.Tick());
+        printf("Send OK at time=%d\n", int(1000.0 / fps));
     }
 
     return 0;

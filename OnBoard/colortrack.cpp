@@ -12,7 +12,7 @@ ColorTrack::ColorTrack()
 std::vector<itr_vision::Block> ColorTrack::Track( Matrix &H, Matrix &S, int color)
 {
 
-    itr_vision::Binarization::Threshold(H,color-15,color+30);
+    itr_vision::Binarization::Threshold(H, color - 15, color + 15);
     itr_vision::Binarization::Threshold(S,70,100);
     int _size=H.GetCol()*H.GetRow();
     for(int i=0; i<_size; ++i)
