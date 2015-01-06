@@ -33,17 +33,15 @@ private:
 
     int row;
     int column;
-    void draw();
 
     U8 tempbuff[65535];
     U8 imgbuffer[352*240*4];
     AVCodec *codec;
     AVCodecContext *dec;
     AVFrame *frame;
-    QUdpSocket *sender;
-    QUdpSocket *receiver;
-    S32 SSPSend(U8* Buffer,S32 Length);
-    void SSPReceivefuc(itr_protocol::StandSerialProtocol *SSP, itr_protocol::StandSerialFrameStruct *SSFS,U8 *Package,S32 PackageLength);
+
+    QUdpSocket *colorRec;
+
 protected:
     bool eventFilter(QObject *obj, QEvent *e);
 

@@ -26,11 +26,11 @@ class SSPReceivefuc:public itr_protocol::StandSerialProtocol::SSPDataRecFun
                     pos_y=*Y;
                     Area=*A;
                     fps=*FPS;
-                    /*
-                     * printf("%f %f%f %f\n",x,y,Area,fps);
+
+                    // printf("%f %f%f %f\n",x,y,Area,fps);
                     FILE* fout=fopen("pos.txt","a");
                     fprintf(fout,"%f %f %f %f\n",x,y,Area,fps);
-                    fclose(fout)*/;
+                    fclose(fout);
                     break;
 
                 }
@@ -85,10 +85,10 @@ MainWindow::MainWindow(QWidget *parent) :
 
     sspUdp.Init(0xA5,0x5A,&sspSend);
     sspUdp.AddDataRecFunc(&sspRec,0);
-    sender=new QUdpSocket(this);
-    receiver=new QUdpSocket(this);
-    receiver->bind(RecPort);
-    connect(receiver,SIGNAL(readyRead()),this,SLOT(processPendingDatagram()));
+
+    colorRec=new QUdpSocket(this);
+    colorRec->bind(RecPort);
+    connect(colorRec,SIGNAL(readyRead()),this,SLOT(processPendingDatagram()));
     avcodec_register_all();
     codec = avcodec_find_decoder(CODEC_ID_H264);
     dec = avcodec_alloc_context3(codec);
@@ -112,10 +112,10 @@ void MainWindow::processPendingDatagram()
     const int SSPLength=18+6;
     static int count=0;
     char filename[]="img00000000.pgm";
-    while(receiver->hasPendingDatagrams())
+    while(colorRec->hasPendingDatagrams())
     {
-        int Length=receiver->pendingDatagramSize();
-        Length=receiver->readDatagram((char*)tempbuff,receiver->pendingDatagramSize());
+        int Length=colorRec->pendingDatagramSize();
+        Length=colorRec->readDatagram((char*)tempbuff,colorRec->pendingDatagramSize());
         sspUdp.ProcessRawByte(tempbuff,SSPLength);
         QString str=QString("x:%1,y:%2\nfps:%3\n").arg(pos_x).arg(pos_y).arg(fps);
         ui->label_2->setText(str);
@@ -132,22 +132,16 @@ void MainWindow::processPendingDatagram()
         if(got<=0)
             continue;
         int k=0;
-        sprintf(filename,"img/img%06d.pgm",count++);
-        FILE* fp=fopen(filename,"w");
-        fprintf(fp,"P5\n320 240\n255\n");
         for(int j=0;j<240;j++)
             for(int i=0;i<320;i++)
             {
-                fprintf(fp,"%c",frame->data[0][i+j*352]);
                 imgbuffer[4*k  ]=frame->data[0][(i+j*352)];
                 imgbuffer[4*k+1]=frame->data[0][(i+j*352)];
                 imgbuffer[4*k+2]=frame->data[0][(i+j*352)];
                 imgbuffer[4*k+3]=frame->data[0][(i+j*352)];
                 k++;
             }
-        fclose(fp);
         ui->radarWidget->update();
-
     }
 }
 
@@ -157,11 +151,13 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *e)
     static int count2=0;
     const int radius=20;
     const int crosslength=8;
+    const int width=320;
+    const int height=240;
     if(obj==ui->radarWidget)
     {
         if(e->type()==QEvent::Paint)
         {
-            QImage img=QImage(imgbuffer,320,240,QImage::Format_RGB32);
+            QImage img=QImage(imgbuffer,width,height,QImage::Format_RGB32);
             QPainter painter(ui->radarWidget);
             painter.drawImage(QPoint(0,0),img);
             painter.setPen(Qt::red);
@@ -170,8 +166,7 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *e)
                 painter.drawRect(pos_x-radius,pos_y-radius,radius+radius,radius+radius);
                 painter.drawLine(pos_x-crosslength,pos_y,pos_x+crosslength,pos_y);
                 painter.drawLine(pos_x,pos_y-crosslength,pos_x,pos_y+crosslength);
-                sprintf(filename,"img%04d.png",count2++);
-                img.save(filename);
+                painter.drawLine(pos_x,pos_y,width/2,height/2);
             }
             else
                 painter.drawRect(140,100,40,40);
@@ -179,12 +174,6 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *e)
         }
     }
 }
-
-void MainWindow::draw()
-{
-}
-
-
 
 
 void MainWindow::on_pushButton_clicked()
