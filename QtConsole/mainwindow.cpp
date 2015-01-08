@@ -29,7 +29,7 @@ class SSPReceivefuc:public itr_protocol::StandSerialProtocol::SSPDataRecFun
 
                     // printf("%f %f%f %f\n",x,y,Area,fps);
                     FILE* fout=fopen("pos.txt","a");
-                    fprintf(fout,"%f %f %f %f\n",x,y,Area,fps);
+                    fprintf(fout,"%f %f %f %f\n",pos_x,pos_y,Area,fps);
                     fclose(fout);
                     break;
 
@@ -222,4 +222,10 @@ void MainWindow::on_pushButton_4_clicked()
 void MainWindow::on_pushButton_5_clicked()
 {
     sspSend.udppackage.IP=ui->lineEdit->text().toStdString();
+}
+
+void MainWindow::on_btExit_clicked()
+{
+    U8 buffer[1]={0x46};
+    sspUdp.SSPSendPackage(0,buffer,1);
 }

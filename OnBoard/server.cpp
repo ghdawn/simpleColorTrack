@@ -21,7 +21,7 @@ using namespace std;
 
 const int MaxSendLength=65535;
 const int MaxRecLength=25;
-const int ListenPort=9031,SendPort=9032;
+const int ListenPort = 9031, ClientPort = 9032, EstiPort = 9033;
 
 //压缩后的图像数据指针
 const void *imgCompressData;
@@ -40,7 +40,7 @@ char SendBuf[MaxSendLength];
 
 //数据发送长度
 int SendLength;
-
+int TrackResultLength;
 itr_system::Udp _udp(ListenPort,false);
 itr_system::Udp::UdpPackage udpPackage;
 itr_system::AsyncBuffer<U8*> yuvBuffer;
@@ -70,7 +70,7 @@ int cameraID=0,cameraTunnel=0;
 * 2  跟踪工作
 */
 U8 mode=0;
-
+bool stop = false;
 
 ///SSP接受数据，进行命令解析
 class SSPReceiveFunc : public itr_protocol::StandSerialProtocol::SSPDataRecFun
@@ -110,6 +110,9 @@ class SSPReceiveFunc : public itr_protocol::StandSerialProtocol::SSPDataRecFun
                 targetPos.Width = *a;
                 targetPos.Height = *b;
                 break;
+            case 0x46:
+                stop = true;
+                break;
                 //直接转发
             default:
                 if (uartOK)
@@ -122,6 +125,7 @@ class SSPReceiveFunc : public itr_protocol::StandSerialProtocol::SSPDataRecFun
 
 class SSPSend : public itr_protocol::StandSerialProtocol::SSPDataSendFun {
     S32 Do(U8 *Buffer, S32 Length) {
+        TrackResultLength = Length;
         memcpy(SendBuf, Buffer, Length);
 
         U8 *img = compressBuffer.GetBufferToRead();
@@ -138,6 +142,8 @@ class SSPSend : public itr_protocol::StandSerialProtocol::SSPDataSendFun {
 //准备要发送的数据
 
 
+
+
 //初始化参数
 void Init(int argc, char **argv)
 {
@@ -146,7 +152,7 @@ void Init(int argc, char **argv)
     config.fps=30;
 
     udpPackage.IP=argv[1];
-    udpPackage.port=SendPort;
+    udpPackage.port = ClientPort;
 
     itr_math::MathObjStandInit();
 
@@ -256,7 +262,7 @@ void* camera_thread(void *name)
     tc.Tick();
     yuv2hsl yuv2hslobj;
 
-    while(1)
+    while (!stop)
     {
         if (mode==0)
         {
@@ -285,7 +291,6 @@ void* camera_thread(void *name)
 
         printf("New Img\n ");
     }
-
     capture.Close();
 }
 void* track_thread(void* name)
@@ -297,7 +302,7 @@ void* track_thread(void* name)
     ColorTrack tracker;
     TimeClock tc;
     tc.Tick();
-    while(1)
+    while (!stop)
     {
         img_hs=matBuffer.GetBufferToRead();
         if (img_hs==NULL)
@@ -370,7 +375,7 @@ int main (int argc, char **argv)
     pthread_create(&tidtrack, NULL, track_thread, (void *)( "Track" ));
 
     int offset=0;
-    for (; ; )
+    while (!stop)
     { 
 
         if(_udp.Receive(RecBuf,MaxRecLength))
@@ -405,13 +410,20 @@ int main (int argc, char **argv)
         offset+=16;
         sspUdp.SSPSendPackage(0,tempbuff,offset);
             // 发送结果
+
         udpPackage.pbuffer=SendBuf;
+
+        udpPackage.port = EstiPort;
+        udpPackage.len = TrackResultLength;
+        _udp.Send(udpPackage);
+
+        udpPackage.port = ClientPort;
         udpPackage.len=SendLength;
         _udp.Send(udpPackage);
 
+
         printf("Send OK at time=%d\n", int(1000.0 / fps));
     }
-
     return 0;
 }
 
