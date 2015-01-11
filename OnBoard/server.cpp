@@ -69,8 +69,11 @@ int cameraID=0,cameraTunnel=0;
 * 1  摄像头工作，跟踪不工作
 * 2  跟踪工作
 */
-U8 mode=0;
-bool stop = false;
+const U8 IDLE = 0;
+const U8 CAPTURE = 1;
+const U8 TRACK = 2;
+const U8 EXIT = 3;
+U8 mode = IDLE;
 
 ///SSP接受数据，进行命令解析
 class SSPReceiveFunc : public itr_protocol::StandSerialProtocol::SSPDataRecFun
@@ -82,7 +85,8 @@ class SSPReceiveFunc : public itr_protocol::StandSerialProtocol::SSPDataRecFun
         {
             case 0x41:
                 mode = Package[1];
-                if (mode != 2) {
+                if (mode != TRACK)
+                {
                     GimbalStop(&controlData, controlLength);
                     if (uartOK)
                         uart.Send((unsigned char *) controlData, controlLength);
@@ -109,9 +113,6 @@ class SSPReceiveFunc : public itr_protocol::StandSerialProtocol::SSPDataRecFun
                 b = (F32 *) (Package + 4);
                 targetPos.Width = *a;
                 targetPos.Height = *b;
-                break;
-            case 0x46:
-                stop = true;
                 break;
                 //直接转发
             default:
@@ -262,9 +263,9 @@ void* camera_thread(void *name)
     tc.Tick();
     yuv2hsl yuv2hslobj;
 
-    while (!stop)
+    while (mode != EXIT)
     {
-        if (mode==0)
+        if (mode == IDLE)
         {
             usleep(10);
             continue;
@@ -302,14 +303,14 @@ void* track_thread(void* name)
     ColorTrack tracker;
     TimeClock tc;
     tc.Tick();
-    while (!stop)
+    while (mode != EXIT)
     {
         img_hs=matBuffer.GetBufferToRead();
         if (img_hs==NULL)
         {
             continue;
         }
-        if(mode==2)
+        if (mode == TRACK)
         {
             tc.Tick();
             Matrix matH(_height,_width,img_hs),matS(_height,_width,img_hs+_size);
@@ -375,7 +376,7 @@ int main (int argc, char **argv)
     pthread_create(&tidtrack, NULL, track_thread, (void *)( "Track" ));
 
     int offset=0;
-    while (!stop)
+    while (mode != EXIT)
     { 
 
         if(_udp.Receive(RecBuf,MaxRecLength))
@@ -383,7 +384,7 @@ int main (int argc, char **argv)
             //使用SSP进行解包
             sspUdp.ProcessRawByte((U8 *)RecBuf,MaxRecLength);
         }
-        if (mode==0)
+        if (mode == IDLE)
         {
             usleep(10);
             continue;
@@ -395,7 +396,7 @@ int main (int argc, char **argv)
         memset(tempbuff,0,sizeof(tempbuff));
         tempbuff[offset++]=0x40;
         tempbuff[offset++]=mode;
-        if(mode==2)
+        if (mode == TRACK)
         {
             U8* tracktemp=trackBuffer.GetBufferToRead();
 

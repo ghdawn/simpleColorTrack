@@ -5,7 +5,8 @@
 #include "itrsystem.h"
 
 const int ServerPort=9031;
-const int RecPort=9032;
+const int ClientPort=9032;
+const int EstiPort=9033;
 float pos_x,pos_y,Area,fps;
 int mode;
 
@@ -51,8 +52,10 @@ public:
     {
         udppackage.pbuffer=(char*)Buffer;
         udppackage.len=Length;
+        udppackage.port=ServerPort;
         udp.Send(udppackage);
-        //sender->writeDatagram((char*)Buffer,Length,QHostAddress::Broadcast,ServerPort);
+        udppackage.port=EstiPort;
+        udp.Send(udppackage);
     }
 };
 
@@ -87,7 +90,7 @@ MainWindow::MainWindow(QWidget *parent) :
     sspUdp.AddDataRecFunc(&sspRec,0);
 
     colorRec=new QUdpSocket(this);
-    colorRec->bind(RecPort);
+    colorRec->bind(ClientPort);
     connect(colorRec,SIGNAL(readyRead()),this,SLOT(processPendingDatagram()));
     avcodec_register_all();
     codec = avcodec_find_decoder(CODEC_ID_H264);
@@ -226,6 +229,6 @@ void MainWindow::on_pushButton_5_clicked()
 
 void MainWindow::on_btExit_clicked()
 {
-    U8 buffer[1]={0x46};
-    sspUdp.SSPSendPackage(0,buffer,1);
+    U8 buffer[2]={0x41,3};
+    sspUdp.SSPSendPackage(0,buffer,2);
 }
