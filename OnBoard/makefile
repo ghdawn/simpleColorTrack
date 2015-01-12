@@ -19,7 +19,7 @@ Libs= -L/usr/local/lib \
 		-lavcodec -lswscale -lavutil -lx264 -lpthread -lv4l2
 
 OBJS_SERVER=	$(ObjPath)server.o \
-				$(ObjPath)colortrack.o $(ObjPath)yuv2hsl.o $(ObjPath)gimbal.o $(ObjPath)lktracking.o
+				$(ObjPath)colortrack.o $(ObjPath)yuv2hsl.o $(ObjPath)gimbal.o
 
 
 CXXFLAGS=	-c -g -O0 -fPIC -L/usr/local/lib
