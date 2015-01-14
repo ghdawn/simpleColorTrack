@@ -4,7 +4,6 @@
 
 extern "C" {
 #include <libavcodec/avcodec.h>
-#include <libswscale/swscale.h>
 }
 
 #include "ix264.h"
@@ -15,8 +14,6 @@ extern "C" {
 #include "yuv2hsl.h"
 #include "gimbal.h"
 
-#define SIMPLEM
-#define TIMEEVALUATION
 using namespace std;
 
 const int MaxSendLength=65535;
@@ -52,7 +49,6 @@ bool uartOK=false;
 
 itr_protocol::StandSerialProtocol sspUdp;
 
-
 itr_math::RectangleF targetPos;
 Config config;
 
@@ -60,8 +56,7 @@ unsigned int _width,_height;
 unsigned int _size;
 
 F32 fps,x,y,Area;
-
-int cameraID=0,cameraTunnel=0;
+U32 cameraID = 0, cameraTunnel = 0;
 /**
 * 程序运行模式
 * 可能的取值与其对应意义
@@ -133,10 +128,13 @@ class SSPSend : public itr_protocol::StandSerialProtocol::SSPDataSendFun {
         while (img == NULL) {
             img = compressBuffer.GetBufferToRead();
         }
-        memcpy(SendBuf + Length, (U8 *) (img + 4), *((int *) img));
+        printf("PointSend:%p ", img);
+        memcpy(SendBuf + Length, (img + 4), *((int *) img));
         SendLength = Length + *((int *) img);
 
         compressBuffer.SetBufferToWrite(img);
+        printf("%p ", img);
+        cout << endl;
         return SendLength;
     }
 };
@@ -176,9 +174,11 @@ void Init(int argc, char **argv)
 
     targetPos.Width=40;
     targetPos.Height=40;
-    targetPos.X=(_width-targetPos.Width)*0.5;
-    targetPos.Y=(_height-targetPos.Height)*0.5;
+    targetPos.X = (_width - targetPos.Width) * 0.5f;
+    targetPos.Y = (_height - targetPos.Height) * 0.5f;
 
+
+    compressBuffer.Init(2);
     yuvBuffer.Init(2);
     yuvBuffer.AddBufferToList(new U8[2*_size]);
     yuvBuffer.AddBufferToList(new U8[2*_size]);
@@ -186,9 +186,11 @@ void Init(int argc, char **argv)
     matBuffer.AddBufferToList(new F32[2*_size]);
     matBuffer.AddBufferToList(new F32[2*_size]);
     trackBuffer.Init(2);
+
     trackBuffer.AddBufferToList(new U8[20]);
     trackBuffer.AddBufferToList(new U8[20]);
-    compressBuffer.Init(2);
+
+
     compressBuffer.AddBufferToList(new U8[2*_size]);
     compressBuffer.AddBufferToList(new U8[2*_size]);
 }
@@ -203,28 +205,29 @@ void* x264_thread(void* name)
     U8 *data[4];
     S32 stride[4];
     U8* pic;
-    U8* _imgcomp;
+    U8 *_imgcomp = NULL;
     TimeClock tc;
     tc.Tick();
     stride[0]=_width;
     stride[1]=_width/2;
     stride[2]=_width/2;
     stride[3]=0;
-    while(1)
+    while (mode != EXIT)
     {
-
         // 压缩图像
         pic=yuvBuffer.GetBufferToRead();
         if (pic==NULL)
         {
-            // usleep(10);
+            usleep(10);
             continue;
         }
+        _imgcomp = compressBuffer.GetBufferToWrite();
         while (_imgcomp==NULL)
         {
             usleep(10);
             _imgcomp=compressBuffer.GetBufferToWrite();
         }
+        printf("Point:%p ", _imgcomp);
         tc.Tick();
         data[0]=pic;
         data[1]=pic+_size;
@@ -238,15 +241,14 @@ void* x264_thread(void* name)
             compressBuffer.SetBufferToWrite(_imgcomp);
             continue;
         }
-
-        *(int*)_imgcomp=imgLength;
+        printf("%p ", _imgcomp);
+        cout << endl;
         memcpy(_imgcomp+4,imgCompressData,imgLength);
-
+        *(int *) _imgcomp = imgLength;
+        printf("%p", _imgcomp);
+        cout << endl;
         compressBuffer.SetBufferToRead(_imgcomp);
-
-    //    printf("Compress OK at time=%d\n",tc.Tick());
     }
-
     compress.Close();
 }
 
@@ -254,15 +256,14 @@ void* camera_thread(void *name)
 {
     itr_device::v4linux capture;
     capture.Open(cameraID,_width,_height,2);
+    capture.SetTunnel(cameraTunnel);
     printf("camera opened !\n");
 
     U8 *pic;
-
     F32* img_g;
     TimeClock tc;
     tc.Tick();
     yuv2hsl yuv2hslobj;
-
     while (mode != EXIT)
     {
         if (mode == IDLE)
@@ -277,7 +278,6 @@ void* camera_thread(void *name)
             usleep(10);
             continue;
         }
-        // capture_get_picture(capture, pic);
         capture.FetchFrame(pic,_size*3/2,NULL);
         img_g=matBuffer.GetBufferToWrite();
         while(img_g==NULL)
@@ -285,18 +285,14 @@ void* camera_thread(void *name)
 	        usleep(10);
             img_g=matBuffer.GetBufferToWrite();
         }
-
         yuv2hslobj.doyuv2hsl(_width,_height,pic,pic+_size,pic+_size+_size/4,img_g,img_g+_size);
         yuvBuffer.SetBufferToRead(pic);
         matBuffer.SetBufferToRead(img_g);
-
-        printf("New Img\n ");
     }
     capture.Close();
 }
 void* track_thread(void* name)
 {
-
     F32* img_hs;
     U8* tempbuff;
     U8 offset=0;
@@ -315,8 +311,6 @@ void* track_thread(void* name)
             tc.Tick();
             Matrix matH(_height,_width,img_hs),matS(_height,_width,img_hs+_size);
             std::vector<itr_vision::Block> list=tracker.Track(matH,matS,ColorTable[config.color]);
-            
-
             if(list.size()>0)
             {
                 x=list[0].x;
@@ -328,7 +322,6 @@ void* track_thread(void* name)
                     usleep(10);
                     tempbuff=trackBuffer.GetBufferToWrite();
                 }
-
                 offset+=4;
                 memcpy(tempbuff+offset,(void*)&x,4);
                 offset+=4;
@@ -356,29 +349,22 @@ void* track_thread(void* name)
             matBuffer.SetBufferToWrite(img_hs);
         }
     }
-
 }
 
 int main (int argc, char **argv)
 {
-
     Init(argc,argv);
-   
     //新建图像采集线程，图像压缩线程
     pthread_t tidx264,tidcam,tidtrack;
-
     U8 tempbuff[100];
     TimeClock tc;
     tc.Tick();
-
     pthread_create(&tidcam, NULL, camera_thread, (void *)( "Camera" ));
     pthread_create(&tidx264, NULL, x264_thread, (void *)( "x264" ));
     pthread_create(&tidtrack, NULL, track_thread, (void *)( "Track" ));
-
     int offset=0;
     while (mode != EXIT)
     { 
-
         if(_udp.Receive(RecBuf,MaxRecLength))
         {
             //使用SSP进行解包
@@ -389,7 +375,6 @@ int main (int argc, char **argv)
             usleep(10);
             continue;
         }
-
         //用SSP封装，包括图像和跟踪结果
         SendLength=0;
         offset=0;
@@ -399,11 +384,10 @@ int main (int argc, char **argv)
         if (mode == TRACK)
         {
             U8* tracktemp=trackBuffer.GetBufferToRead();
-
             if(tracktemp!=NULL)
             {
                 MemoryCopy(tempbuff+offset,(void*)tracktemp,16);
-                fps = 1000 / tc.Tick();
+                fps = 1000.0f / tc.Tick();
                 memcpy(tempbuff + offset, (void *) &fps, 4);
                 trackBuffer.SetBufferToWrite(tracktemp);
             }
@@ -411,9 +395,7 @@ int main (int argc, char **argv)
         offset+=16;
         sspUdp.SSPSendPackage(0,tempbuff,offset);
             // 发送结果
-
         udpPackage.pbuffer=SendBuf;
-
         udpPackage.port = EstiPort;
         udpPackage.len = TrackResultLength;
         _udp.Send(udpPackage);
@@ -421,9 +403,7 @@ int main (int argc, char **argv)
         udpPackage.port = ClientPort;
         udpPackage.len=SendLength;
         _udp.Send(udpPackage);
-
-
-        printf("Send OK at time=%d\n", int(1000.0 / fps));
+        printf("Send OK at time=%f\n", 1000.0 / fps);
     }
     return 0;
 }

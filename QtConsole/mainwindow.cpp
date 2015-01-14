@@ -114,7 +114,7 @@ void MainWindow::processPendingDatagram()
 {
     const int SSPLength=18+6;
     static int count=0;
-    char filename[]="img00000000.pgm";
+    char filename[]="x264/x2640000000.x264";
     while(colorRec->hasPendingDatagrams())
     {
         int Length=colorRec->pendingDatagramSize();
@@ -126,7 +126,7 @@ void MainWindow::processPendingDatagram()
         AVPacket pkt;
         pkt.data = tempbuff+SSPLength;
         pkt.size = Length-SSPLength;
-        sprintf(filename,"x264/x264%06d.x264",count);
+        sprintf(filename,"x264/x264%06d.x264",++count);
         FILE* fx264=fopen(filename,"w");
         for(int i=0;i<pkt.size;i++)
             fprintf(fx264,"%c",pkt.data[i]);
