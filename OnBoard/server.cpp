@@ -311,6 +311,7 @@ void* track_thread(void* name)
                     usleep(10);
                     tempbuff=trackBuffer.GetBufferToWrite();
                 }
+                offset = 0;
                 offset+=4;
                 memcpy(tempbuff+offset,(void*)&x,4);
                 offset+=4;
@@ -320,6 +321,7 @@ void* track_thread(void* name)
                 offset+=4;
                 trackBuffer.SetBufferToRead(tempbuff);
                 GimbalControl( x, y,&controlData,controlLength);
+                printf("offset %d", offset);
                 if(uartOK)
                     uart.Send((unsigned char*)controlData,controlLength);
             }
