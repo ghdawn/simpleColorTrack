@@ -342,7 +342,7 @@ void* track_thread(void* name)
                     uart.Send((unsigned char*)controlData,controlLength);
             }
             matBuffer.SetBufferToWrite(img_hs);
-            printf("Track OK, at time=%d\n", tc.Tick());
+            printf("\nTrack OK, at %f ,%f \t time=%d\n", x, y, tc.Tick());
         }
         else
         {
@@ -388,7 +388,7 @@ int main (int argc, char **argv)
             {
                 MemoryCopy(tempbuff+offset,(void*)tracktemp,16);
                 fps = 1000.0f / tc.Tick();
-                memcpy(tempbuff + offset, (void *) &fps, 4);
+                MemoryCopy(tempbuff + offset, (void *) &fps, 4);
                 trackBuffer.SetBufferToWrite(tracktemp);
             }
         }
