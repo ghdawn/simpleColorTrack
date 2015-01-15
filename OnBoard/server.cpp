@@ -128,13 +128,10 @@ class SSPSend : public itr_protocol::StandSerialProtocol::SSPDataSendFun {
         while (img == NULL) {
             img = compressBuffer.GetBufferToRead();
         }
-        printf("PointSend:%p ", img);
         memcpy(SendBuf + Length, (img + 4), *((int *) img));
         SendLength = Length + *((int *) img);
 
         compressBuffer.SetBufferToWrite(img);
-        printf("%p ", img);
-        cout << endl;
         return SendLength;
     }
 };
@@ -179,6 +176,8 @@ void Init(int argc, char **argv)
 
 
     compressBuffer.Init(2);
+    compressBuffer.AddBufferToList(new U8[2 * _size]);
+    compressBuffer.AddBufferToList(new U8[2 * _size]);
     yuvBuffer.Init(2);
     yuvBuffer.AddBufferToList(new U8[2*_size]);
     yuvBuffer.AddBufferToList(new U8[2*_size]);
@@ -186,13 +185,8 @@ void Init(int argc, char **argv)
     matBuffer.AddBufferToList(new F32[2*_size]);
     matBuffer.AddBufferToList(new F32[2*_size]);
     trackBuffer.Init(2);
-
     trackBuffer.AddBufferToList(new U8[20]);
     trackBuffer.AddBufferToList(new U8[20]);
-
-
-    compressBuffer.AddBufferToList(new U8[2*_size]);
-    compressBuffer.AddBufferToList(new U8[2*_size]);
 }
 
 void* x264_thread(void* name)
@@ -227,7 +221,6 @@ void* x264_thread(void* name)
             usleep(10);
             _imgcomp=compressBuffer.GetBufferToWrite();
         }
-        printf("Point:%p ", _imgcomp);
         tc.Tick();
         data[0]=pic;
         data[1]=pic+_size;
@@ -241,12 +234,8 @@ void* x264_thread(void* name)
             compressBuffer.SetBufferToWrite(_imgcomp);
             continue;
         }
-        printf("%p ", _imgcomp);
-        cout << endl;
         memcpy(_imgcomp+4,imgCompressData,imgLength);
         *(int *) _imgcomp = imgLength;
-        printf("%p", _imgcomp);
-        cout << endl;
         compressBuffer.SetBufferToRead(_imgcomp);
     }
     compress.Close();
