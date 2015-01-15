@@ -386,13 +386,16 @@ int main (int argc, char **argv)
         offset+=16;
         sspUdp.SSPSendPackage(0,tempbuff,offset);
             // 发送结果
+        string IP = udpPackage.IP;
         udpPackage.pbuffer=SendBuf;
         udpPackage.port = EstiPort;
+        udpPackage.IP = "127.0.0.1";
         udpPackage.len = TrackResultLength;
         _udp.Send(udpPackage);
 
         udpPackage.port = ClientPort;
         udpPackage.len=SendLength;
+        udpPackage.IP = IP;
         _udp.Send(udpPackage);
         printf("Send OK at time=%f\n", 1000.0 / fps);
     }
