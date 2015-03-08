@@ -7,6 +7,7 @@
 const int ServerPort=9031;
 const int ClientPort=9032;
 const int EstiPort=9033;
+const int EstiResultPort=9034;
 float pos_x,pos_y,Area,fps;
 int mode;
 
@@ -68,6 +69,7 @@ MainWindow::MainWindow(QWidget *parent) :
 {
     ui->setupUi(this);
     ui->radarWidget->installEventFilter(this);
+    ui->laserwidget->installEventFilter(this);
     setWindowTitle(tr("无人机视觉测试"));
     ui->doubleSpinBox->setRange(0.0,10.0);
     ui->doubleSpinBox_2->setRange(0.0,10.0);
@@ -88,10 +90,12 @@ MainWindow::MainWindow(QWidget *parent) :
 
     sspUdp.Init(0xA5,0x5A,&sspSend);
     sspUdp.AddDataRecFunc(&sspRec,0);
-
+    ResultRec=new QUdpSocket(this);
+    ResultRec->bind(EstiResultPort);
+    connect(ResultRec,SIGNAL(readyRead()),this,SLOT(processEstimateResultData()));
     colorRec=new QUdpSocket(this);
     colorRec->bind(ClientPort);
-    connect(colorRec,SIGNAL(readyRead()),this,SLOT(processPendingDatagram()));
+    connect(colorRec,SIGNAL(readyRead()),this,SLOT(processVisionData()));
     avcodec_register_all();
     codec = avcodec_find_decoder(CODEC_ID_H264);
     dec = avcodec_alloc_context3(codec);
@@ -101,7 +105,7 @@ MainWindow::MainWindow(QWidget *parent) :
     }
 
     frame = avcodec_alloc_frame();
-
+    memset((void*)&sensordata,0,sizeof(sensordata));
 }
 
 
@@ -110,7 +114,7 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
-void MainWindow::processPendingDatagram()
+void MainWindow::processVisionData()
 {
     const int SSPLength=18+6;
     static int count=0;
@@ -131,6 +135,21 @@ void MainWindow::processPendingDatagram()
         for(int i=0;i<pkt.size;i++)
             fprintf(fx264,"%c",pkt.data[i]);
         fclose(fx264);
+        if(mode!=3)
+        {
+            sprintf(filename,"rec/rec%06d.dat",count);
+            FILE* frec=fopen(filename,"w");
+            fprintf(frec,"%f %f\n",pos_x,pos_y);
+            fprintf(frec,"%f %f %f\n",sensordata.x,sensordata.y,sensordata.height);
+            //        fprintf(frec,"%f %f %f\n",sensordata)
+            fprintf(frec,"%d\n",sensordata.laserlength);
+            for(int i=0;i<sensordata.laserlength;i++)
+                fprintf(frec,"%d ",sensordata.laser[i]);
+            fprintf(frec,"%d\n",pkt.size);
+            for(int i=0;i<pkt.size;i++)
+                fprintf(frec,"%c",pkt.data[i]);
+            fclose(frec);
+        }
         int ret = avcodec_decode_video2(dec, frame, &got, &pkt);
         if(got<=0)
             continue;
@@ -148,6 +167,23 @@ void MainWindow::processPendingDatagram()
     }
 }
 
+void MainWindow::processEstimateResultData()
+{
+
+    while(ResultRec->hasPendingDatagrams())
+    {
+        int Length=ResultRec->pendingDatagramSize();
+        Length=ResultRec->readDatagram((char*)&sensordata,sizeof(sensordata));
+        for(int i=0;i<sensordata.laserlength;i++)
+            printf("%d ",sensordata.laser[i]);
+        printf("\n");
+
+        Lon=QString("Lon:%1").arg(sensordata.x);
+        Lat=QString("Lat:%1").arg(sensordata.y);
+        Alt=QString("Alt:%1").arg(sensordata.height);
+        ui->laserwidget->update();
+    }
+}
 bool MainWindow::eventFilter(QObject *obj, QEvent *e)
 {
     char filename[30];
@@ -156,6 +192,8 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *e)
     const int crosslength=8;
     const int width=320;
     const int height=240;
+    const int base=ui->laserwidget->geometry().height();
+    const float coee=0.075f;
     if(obj==ui->radarWidget)
     {
         if(e->type()==QEvent::Paint)
@@ -164,16 +202,35 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *e)
             QPainter painter(ui->radarWidget);
             painter.drawImage(QPoint(0,0),img);
             painter.setPen(Qt::red);
-            if(mode==2)
+            if(mode==2||mode==3)
             {
                 painter.drawRect(pos_x-radius,pos_y-radius,radius+radius,radius+radius);
                 painter.drawLine(pos_x-crosslength,pos_y,pos_x+crosslength,pos_y);
                 painter.drawLine(pos_x,pos_y-crosslength,pos_x,pos_y+crosslength);
                 painter.drawLine(pos_x,pos_y,width/2,height/2);
+                painter.drawText(QPoint(pos_x+radius,pos_y-radius),Lon);
+                painter.drawText(QPoint(pos_x+radius,pos_y-radius+15),Lat);
+                painter.drawText(QPoint(pos_x+radius,pos_y-radius+30),Alt);
             }
             else
                 painter.drawRect(140,100,40,40);
             return true;
+        }
+    }
+    else if(obj==ui->laserwidget)
+    {
+        if(e->type()==QEvent::Paint)
+        {
+            QPainter painter(ui->laserwidget);
+
+            for(int i=300;i<700;i++)
+            {
+                if(sensordata.laser[i]<2500)
+                    painter.setPen(Qt::red);
+                else
+                    painter.setPen(Qt::blue);
+                painter.drawLine(i-300,base,i-300,base-sensordata.laser[i]*coee);
+            }
         }
     }
 }
@@ -232,3 +289,5 @@ void MainWindow::on_btExit_clicked()
     U8 buffer[2]={0x41,3};
     sspUdp.SSPSendPackage(0,buffer,2);
 }
+
+

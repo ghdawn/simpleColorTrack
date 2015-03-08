@@ -33,10 +33,20 @@
      <widget class="QWidget" name="radarWidget" native="true">
       <property name="geometry">
        <rect>
-        <x>50</x>
-        <y>10</y>
-        <width>531</width>
+        <x>0</x>
+        <y>0</y>
+        <width>320</width>
         <height>281</height>
+       </rect>
+      </property>
+     </widget>
+     <widget class="QWidget" name="laserwidget" native="true">
+      <property name="geometry">
+       <rect>
+        <x>319</x>
+        <y>-1</y>
+        <width>311</width>
+        <height>291</height>
        </rect>
       </property>
      </widget>
@@ -46,7 +56,7 @@
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>370</y>
+      <y>390</y>
       <width>71</width>
       <height>41</height>
      </rect>
@@ -111,8 +121,8 @@
    <widget class="QPushButton" name="pushButton_4">
     <property name="geometry">
      <rect>
-      <x>250</x>
-      <y>430</y>
+      <x>430</x>
+      <y>410</y>
       <width>75</width>
       <height>23</height>
      </rect>
@@ -124,8 +134,8 @@
    <widget class="QWidget" name="layoutWidget">
     <property name="geometry">
      <rect>
-      <x>350</x>
-      <y>390</y>
+      <x>530</x>
+      <y>370</y>
       <width>109</width>
       <height>136</height>
      </rect>
@@ -205,7 +215,7 @@
    <widget class="QLineEdit" name="lineEdit">
     <property name="geometry">
      <rect>
-      <x>22</x>
+      <x>40</x>
       <y>400</y>
       <width>141</width>
       <height>27</height>
